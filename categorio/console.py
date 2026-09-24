@@ -23,32 +23,46 @@ and every write goes through the site's rules:
   or node the server uses (`set`, `swarm`, `index`), or are the site itself
   (`web`).
 
-The list is explicit, so a new CLI command stays unavailable until someone
-decides it is safe.
+What a line touches comes from OntoDAG itself: every command declares its
+effects (`COMMAND_EFFECTS`, OntoDAG 0.27), and a command without them fails
+OntoDAG's own suite. So a command added later runs here only if it declares
+nothing beyond reading or writing a store; the site keeps no list of its own
+that could fall behind.
 """
 
 import io
 import shlex
 from collections import OrderedDict, deque
 
-from ontodag.__main__ import PARSER, dispatch
+from ontodag.__main__ import COMMAND_EFFECTS, PARSER, dispatch, effects as _effects
 
 from categorio import names, ontology
 
-READS = {"get", "count", "below", "?", "canon", "list", "show",
-         "overlapping", "overlaps", "meet", "help"}
-WRITES = {"put", "move", "remove"}
-VERSIONS = {"history", "status", "undo", "redo"}
-VOCABULARY = {"pack", "prelude"}           # a read or a write, by its flags
+# What may run is decided by what a line touches, as OntoDAG declares it
+# (`ontodag.__main__.COMMAND_EFFECTS`, sharpened per line by `effects`):
+#   only `reads`             anyone, on the public vocabulary or their store
+#   `writes` / `versions`    your own store only
+#   `files`, `network`, `settings`   nowhere — they act on the server
+# One policy of the site's own on top: adopting a pack (`pack NAME`,
+# `prelude`) is refused, since it would copy the shared vocabulary into a
+# store (DESIGN §2).
+ON_A_STORE = frozenset({"reads", "writes", "versions"})
+VOCABULARY = {"pack", "prelude"}
+
+
+def touches(tokens):
+    """The line's effects, or None for a command OntoDAG does not have."""
+    try:
+        return _effects(tokens)
+    except ValueError:
+        return None
 
 
 def adopts(tokens):
     """`pack NAME` and `prelude` change the store; listing, `--show` and
     `--diff` only look."""
-    command, rest = tokens[0], tokens[1:]
-    if command not in VOCABULARY or {"--show", "--diff"} & set(rest):
-        return False
-    return command == "prelude" or any(not t.startswith("-") for t in rest)
+    touched = touches(tokens)
+    return tokens[0] in VOCABULARY and touched is not None and "writes" in touched
 
 REFUSED = {
     "import": "reads a file on the server — use Store → Import, which previews first",
@@ -118,23 +132,25 @@ class Result:
 def refusal(tokens, scope, signed_in):
     """Why this line may not run here, or None."""
     command = tokens[0]
-    if any(t in ("-o", "--output") or t.startswith("--output=") for t in tokens):
+    touched = touches(tokens)
+    if touched is None:
+        return "is not a command here (try `help`)"
+    if "files" in touched and "files" not in COMMAND_EFFECTS.get(command, ()):
         return "with -o would write a file on the server, which is not available here"
-    if command in READS or (command in VOCABULARY and not adopts(tokens)):
+    if not touched <= ON_A_STORE:
+        return REFUSED.get(command) or (
+            "touches the server's " + ", ".join(sorted(touched - ON_A_STORE)) + ", which no page may")
+    if adopts(tokens):
+        return ("would copy the whole pack into your store — a second copy of what "
+                "every store here already shares. To use it, just file under its "
+                "categories; to take it away with you, include it in Store → Export")
+    if touched <= {"reads"}:
         return None
-    if command in WRITES | VERSIONS or adopts(tokens):
-        if adopts(tokens):
-            return ("would copy the whole pack into your store — a second copy of what "
-                    "every store here already shares. To use it, just file under its "
-                    "categories; to take it away with you, include it in Store → Export")
-        if not signed_in:
-            return "needs an account — sign in to run it on your own store"
-        if scope != "mine":
-            return "changes a store — switch to “your store” to run it"
-        return None
-    if command in REFUSED:
-        return REFUSED[command]
-    return "is not a command here (try `help`)"
+    if not signed_in:
+        return "needs an account — sign in to run it on your own store"
+    if scope != "mine":
+        return "changes a store — switch to “your store” to run it"
+    return None
 
 
 def _run(tokens, dag):
@@ -148,7 +164,7 @@ def _run(tokens, dag):
         text = text[:OUTPUT_LIMIT] + "\n…\n"
         note += "odag: the answer is cut short here; narrow the question\n"
     if tokens[0] == "help":
-        note += ("odag: on this site: " + " ".join(sorted((READS | WRITES | VERSIONS | VOCABULARY) - {"?"}))
+        note += ("odag: on this site: " + " ".join(sorted(n for n, e in COMMAND_EFFECTS.items() if e <= ON_A_STORE))
                  + " — see the list of commands below\n")
     return text, note, code
 
@@ -182,11 +198,12 @@ class Console:
             return Result(line, err=f"odag: `{tokens[0]}` {why}\n", code=2, scope=scope)
 
         command = tokens[0]
+        touched = touches(tokens)
         if scope == "public":
             return self._read_public(line, tokens)
-        if command in VERSIONS:
+        if "versions" in touched:
             return self._versions(user, line, command)
-        if command in WRITES:
+        if "writes" in touched:
             return self._write(user, line, tokens, confirm, context)
         stores = self.site.stores
         dag = stores.get(user)
@@ -262,16 +279,18 @@ def commands():
         for name in members:
             if name not in sub.choices:
                 continue
-            if name in READS:
-                where = "anyone"
-            elif name in VOCABULARY:
+            touched = COMMAND_EFFECTS.get(name, frozenset({"unknown"}))
+            if name in VOCABULARY:
                 where = "anyone, to look (list, --show, --diff)"
-            elif name in WRITES | VERSIONS:
+            elif touched <= {"reads"}:
+                where = "anyone"
+            elif touched <= ON_A_STORE:
                 where = "your store"
             else:
                 where = None
             rows.append({"name": name, "help": described.get(name, ""), "where": where,
-                         "why": None if where else REFUSED.get(name, "not checked for this site yet")})
+                         "why": None if where else REFUSED.get(
+                             name, "touches the server's " + ", ".join(sorted(touched - ON_A_STORE)))})
         if rows:
             groups.append((title, rows))
     return groups

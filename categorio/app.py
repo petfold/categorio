@@ -11,7 +11,6 @@ from urllib.parse import quote
 from flask import (Flask, Response, abort, flash, g, redirect, render_template,
                    request, session, url_for)
 from markupsafe import Markup
-from ontodag import dimensions
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from categorio import names, ontology, picture
@@ -121,13 +120,13 @@ def own_category(name):
 
 
 def dimension_term(name):
-    """A value of a dimension the store declares, such as `time(2026-08)`.
-    OntoDAG creates it on first use; its own parse trigger is the same
-    test: the head is declared under `dimension`."""
-    split = dimensions.split_term(name)
-    dag = own()
-    return (split is not None and split[0] in dag.nodes and "dimension" in dag.nodes
-            and dag.is_below(split[0], "dimension"))
+    """A value of a dimension the store declares, such as `time(2026-08)`,
+    which OntoDAG creates on first use. A malformed one (`time(zzz)`) counts
+    too, so that `put` gives OntoDAG's own message about it."""
+    try:
+        return own().is_term(name)
+    except ValueError:
+        return True
 
 
 def usable(name):

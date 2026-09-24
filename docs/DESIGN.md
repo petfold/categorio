@@ -312,8 +312,12 @@ stores are real, so the rules are stricter:
 | `pack NAME`, `prelude` | nowhere | adopting would copy the whole pack into your store, a second copy per user of what every store already shares (§2, memory). You use a pack by filing under its names; to take one away whole, **Store → Export** can include it in the file, merged on the way out |
 | `web` | nowhere | it's what you're looking at |
 
-The list is explicit: a command added to OntoDAG later stays unavailable
-until someone decides it is safe. Each command runs against one DAG
+The rule comes from OntoDAG, not from a list kept here: every OntoDAG
+command declares what it touches (`reads`, `writes`, `versions`, `files`,
+`network`, `settings`), and `effects(argv)` sharpens that for a whole line
+(`-o FILE` adds `files`). A line runs here only if it touches nothing but a
+store, so a command added to OntoDAG later is allowed or refused by its own
+declaration. Each command runs against one DAG
 through a session that never composes the server's `overlays`, so an
 answer can't include another store. Writes also bring in what the buttons
 would: the public ancestors of the names used, and this site's addresses

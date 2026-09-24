@@ -6,17 +6,12 @@ from a file: merging the packs takes about three seconds, parsing the same
 graph from `.od` text more than twice that.
 """
 
-import os
-import tempfile
 import threading
 from collections import OrderedDict
 
 from ontodag import packs as _packs
+from ontodag import native as _native
 from ontodag.dag import OntoDAG
-# The native reader/writer are path-based and private to the CLI module; going
-# through a temporary file keeps this site on exactly the CLI's format rather
-# than on a copy of it that could drift.
-from ontodag.__main__ import _load_native, _save_native
 
 from categorio.names import ROOT
 
@@ -59,7 +54,6 @@ def pack_summary(name):
 
 _lock = threading.Lock()
 _public = None
-_members = {}
 
 
 def pack_dag(name):
@@ -71,25 +65,10 @@ def pack_dag(name):
     return _packs.pack_dag(name)
 
 
-def pack_members(name):
-    """The names a pack brings, from its entry list (no DAG is built)."""
-    if name not in _members:
-        _members[name] = frozenset(node for node, _parents in _packs.pack_entries(name))
-    return _members[name]
-
-
-def pack_top(name):
-    """A pack's top categories — what `pack_dag(name)` has directly under its
-    root — read from the entry list: every name the pack mentions that it
-    never files under anything. (For a domain pack that includes the core
-    names it hangs from, as OntoDAG's own pack DAG does.)"""
-    entries = _packs.pack_entries(name)
-    if (name != "prelude" and not _packs.presumes_core(name)
-            and _packs.presumes_prelude(name)):
-        entries = entries + _packs.pack_entries("prelude")   # it ships as closure, as in pack_dag
-    mentioned = {node for node, _ in entries} | {p for _, parents in entries for p in parents}
-    filed = {node for node, parents in entries if parents}
-    return sorted(mentioned - filed)
+# A pack's names and its top come from OntoDAG (0.27), read from the pack's
+# entry list: no pack DAG is built for them.
+pack_members = _packs.pack_members
+pack_top = _packs.pack_top
 
 
 def packs_used(dag):
@@ -160,30 +139,17 @@ def prelude():
 
 def parse(text):
     """`.od` text -> OntoDAG. Raises ValueError on a malformed file."""
-    fd, path = tempfile.mkstemp(suffix=".od")
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            fh.write(text)
-        try:
-            return _load_native(path)
-        except ValueError:
-            raise
-        except Exception as exc:          # shlex errors, bad edges, cycles
-            raise ValueError(f"not a readable .od file ({exc})") from exc
-    finally:
-        os.unlink(path)
+        return _native.loads(text, source="the file")
+    except ValueError:
+        raise
+    except Exception as exc:          # shlex errors, bad edges, cycles
+        raise ValueError(f"not a readable .od file ({exc})") from exc
 
 
 def serialize(dag):
-    """OntoDAG -> canonical `.od` text."""
-    fd, path = tempfile.mkstemp(suffix=".od")
-    os.close(fd)
-    try:
-        _save_native(dag, path)
-        with open(path, encoding="utf-8") as fh:
-            return fh.read()
-    finally:
-        os.unlink(path)
+    """OntoDAG -> canonical `.od` text, as `odag` writes it."""
+    return _native.dumps(dag)
 
 
 def parents(dag, name):
