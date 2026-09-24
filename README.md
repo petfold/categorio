@@ -6,6 +6,9 @@ A website over [OntoDAG](https://github.com/petfold/ontodag).
   tutorial for non-technical users. The site shows it at `/guide`, linked
   from every page.
 - **The design**, and the reasons behind it: [docs/DESIGN.md](docs/DESIGN.md).
+- **Running the live site:** [docs/ADMIN.md](docs/ADMIN.md) (updates,
+  backups, restoring, certificates, DNS, accounts); setting up a server
+  from scratch: [docs/DEPLOY.md](docs/DEPLOY.md).
 - **What's next:** [ROADMAP.md](ROADMAP.md).
 
 ## What it does

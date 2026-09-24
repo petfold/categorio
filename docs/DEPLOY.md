@@ -1,5 +1,9 @@
 # Deploying categor.io on Ubuntu 24.04
 
+Setting up a server from scratch. For running the live site afterwards
+(updates, backups, restoring, certificates, DNS, accounts), see
+[ADMIN.md](ADMIN.md).
+
 A step-by-step runbook for one VPS (written for 158.220.117.131). The site
 runs as its own unprivileged user under `gunicorn`, behind `nginx`, with
 HTTPS from Let's Encrypt. The files it installs are in `deploy/`.
@@ -195,9 +199,9 @@ own computer:
 rsync -av peter@158.220.117.131:/var/backups/categorio/ ~/categorio-backups/
 ```
 
-(`peter` needs to read the folder: `sudo chgrp -R peter /var/backups/categorio`
-and `sudo chmod -R g+rX /var/backups/categorio`, or run the rsync with sudo on
-the server side.)
+(For `peter` to read the backups, which only root can by default, set up
+the `categorio-backups` group once, as described in [ADMIN.md](ADMIN.md),
+"Copying backups to your own computer".)
 
 ## Updating to a new version
 
