@@ -41,6 +41,13 @@ The design is in [docs/DESIGN.md](docs/DESIGN.md).
 - [ ] Editing the public store through `maintain-packs` (DESIGN §7); pack upgrades refreshing the public chains stores keep
 - [ ] Account deletion (its address stays reserved)
 
+## Walls and inboxes (design: DESIGN.md §14; canonical: OntoDAG docs/plans/WALLS_AND_INBOXES.md)
+
+- [ ] `everyone` as a principal every reader holds, visitors included
+- [ ] Posting: a post box with an audience picker (one person, a group, everyone), filed under `posted(now)`
+- [ ] A wall page per account, and an inbox page per reader, newest first, with filters by author and category
+- [ ] Waits on OntoDAG: `posted` declared where stores can adopt it, and `sharing.timeline`
+
 ## Later
 
 - [ ] Write access for others: "share with edit", e.g. a department head managing Acme's `sales`

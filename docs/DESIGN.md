@@ -337,3 +337,40 @@ fold 406 public subcategories out of the way. The alternative is to let a
 category of yours shadow the public name in your store. But then two
 different `work`s meet in every export and every query, which is exactly
 the collision addresses were designed to avoid (§3).
+
+## 14. Walls and inboxes (proposed, not built)
+
+The sharing rule, carried into time: each account gets a **wall** (its
+outbox: its posts in time order) and an **inbox** (the walls it follows,
+merged). Not "feed": on Swarm a feed is one owner's published sequence of
+updates, the opposite direction; a wall is published as one. The canonical
+design, shared with ucomm, is OntoDAG's `docs/plans/WALLS_AND_INBOXES.md`.
+This section is what the site would add.
+
+- **Posting.** A post box: some text (and later files), an audience picker
+  (one person, a group of yours, or everyone), and optionally categories,
+  as when filing anything else. Posting files the post in your store under
+  the audience, and under `posted(now)`, a value of `posted`, which is a
+  role of `time`. It uses no word from the public vocabulary: `wall`,
+  `post` and `feed` all exist there with other meanings, so none of them can
+  be the mechanism (compare §13).
+- **Everyone.** One reserved principal, `everyone`, that every reader holds,
+  including visitors without an account. Posting to everyone is the only way
+  anything on the site becomes public.
+- **A wall page** per account: that account's posts that *you* may see,
+  newest first. Visitors see only posts for everyone.
+- **An inbox page**: the walls of everyone you have accepted, merged, newest
+  first, with filters by author and by category (`dog`, this month). Later,
+  ranking by ucomm's attention engine instead of by time alone.
+- **Chats** fall out: posts to one person, read as a conversation.
+- **Unchanged from §4–§6:**
+  - receivers never see who else received a post;
+  - audiences nest;
+  - only accepted senders reach your inbox; the others arrive as requests.
+- **About-time and publish-time stay apart.** Photos *of* August, posted
+  today, answer both questions, and neither date is mistaken for the other.
+
+Open for the site: how `posted` gets into stores (a small pack, or the
+prelude, per the canonical note's Q3); and replies, which need cross-store
+names (OntoDAG SHARING.md Q5).
+
