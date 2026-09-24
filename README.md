@@ -55,12 +55,15 @@ pytest
 Logins and account stores go in `data/` beside the code (ignored by git),
 unless `CATEGORIO_DATA` names another folder.
 
-For a deployment:
+For a deployment on Ubuntu, follow **[docs/DEPLOY.md](docs/DEPLOY.md)**
+step by step (service account, gunicorn under systemd, nginx, HTTPS,
+backups; the files are in `deploy/`). In short:
 
 ```bash
 export CATEGORIO_SECRET_KEY=...        # required, or sessions reset on restart
 export CATEGORIO_DATA=/var/lib/categorio
 export CATEGORIO_SECURE_COOKIES=1      # behind HTTPS
+export CATEGORIO_PROXY=1               # behind nginx: trust its X-Forwarded-* headers
 gunicorn -w 1 --threads 8 'categorio:create_app()'
 ```
 

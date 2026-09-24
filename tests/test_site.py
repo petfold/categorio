@@ -500,3 +500,25 @@ def test_a_date_filed_before_registration_never_counts(app, people):
     carol.put("new-note")
     carol.share("new-note", "dave")
     assert dave.get("/from/carol/c/new-note").status_code == 200
+
+
+def test_behind_a_proxy(tmp_path, monkeypatch):
+    """CATEGORIO_PROXY=1 (docs/DEPLOY.md): nginx's X-Forwarded-* headers are
+    trusted, so the site knows a request came over HTTPS."""
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    monkeypatch.setenv("CATEGORIO_PROXY", "1")
+    app = create_app({"DATA": str(tmp_path), "TESTING": True, "SECRET_KEY": "t"})
+    assert isinstance(app.wsgi_app, ProxyFix)
+
+    seen = {}
+
+    @app.get("/_scheme")
+    def _scheme():
+        from flask import request
+        seen.update(scheme=request.scheme, addr=request.remote_addr)
+        return ""
+    app.test_client().get("/_scheme", headers={"X-Forwarded-Proto": "https",
+                                               "X-Forwarded-For": "203.0.113.9"})
+    assert seen == {"scheme": "https", "addr": "203.0.113.9"}
+    monkeypatch.delenv("CATEGORIO_PROXY")
+    assert not isinstance(create_app({"DATA": str(tmp_path), "TESTING": True}).wsgi_app, ProxyFix)

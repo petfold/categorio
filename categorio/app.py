@@ -53,6 +53,11 @@ def create_app(config=None):
     )
     if config:
         app.config.update(config)
+    if os.environ.get("CATEGORIO_PROXY") == "1":
+        # Behind nginx: trust its X-Forwarded-* headers (one proxy hop), so
+        # the app knows a request came in over HTTPS and from whom.
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     if not app.config["SECRET_KEY"]:
         # Fine for a laptop; a deployment sets CATEGORIO_SECRET_KEY so that
         # sessions survive a restart and are shared between workers.
