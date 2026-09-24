@@ -46,6 +46,7 @@ install graphviz`). Without it, everything else works and a picture says
 why it can't be drawn.
 
 ```bash
+python3 -m venv .venv && . .venv/bin/activate   # needs OntoDAG 0.27 or later
 pip install -e ".[test]"
 python -m categorio.app            # http://127.0.0.1:8000
 pytest
