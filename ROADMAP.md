@@ -46,7 +46,18 @@ The design is in [docs/DESIGN.md](docs/DESIGN.md).
 - [ ] `everyone` as a principal every reader holds, visitors included
 - [ ] Posting: a post box with an audience picker (one person, a group, everyone), filed under `posted(now)`
 - [ ] A wall page per account, and an inbox page per reader, newest first, with filters by author and category
-- [ ] Waits on OntoDAG: `posted` declared where stores can adopt it, and `sharing.timeline`
+- [ ] Waits on OntoDAG: `posted` declared where stores can adopt it, and `sharing.timeline` (built on OntoDAG's `swarm-sharing` branch, 2026-09-25, unreleased)
+
+## Without a server (canonical: OntoDAG docs/plans/SHARING_ON_SWARM.md)
+
+The same sharing and receiving on Swarm, with keys instead of a server
+deciding who sees what. OntoDAG's `ontodag.keyplan` publishes a store's
+shares as keys and reads them back with one personal key; it has run on
+Swarm mainnet (unreleased, on OntoDAG's `swarm-sharing` branch).
+
+- [ ] Decide the site's role then (the plan's S16): a hosted client holding no keys, a bridge for people who'd rather not manage keys, or retired
+- [ ] Export a store to Swarm with its key plan, so an owner can leave the site and keep their shares and readers
+- [ ] A reader page that opens a friend's key plan in the browser, with no server (the plan's Phase 4)
 
 ## Later
 
