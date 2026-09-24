@@ -2,13 +2,20 @@
 
 Each store is a record-store directory: content-addressed blobs and a root
 pointer, so every commit is a version and undo/redo move the pointer, as
-`odag undo` does. Stores are held in memory once loaded; every write goes
-through `edit`, which commits and then keeps the derived records in step:
-the `mentions` index, and the registration of new own addresses (§10).
+`odag undo` does. Every write goes through `edit`, which commits and then
+keeps the derived records in step: the `mentions` index, and the
+registration of new own addresses (§10).
+
+Memory: the stores used most recently stay loaded, within a limit on how
+many and on how many categories they hold together; the rest are reloaded
+from disk when next needed. Nothing is lost by letting one go — the disk
+holds every commit. (The public vocabulary is not a store here: one copy per
+process, shared by everyone, see `ontology.public`.)
 """
 
 import os
 import threading
+from collections import OrderedDict
 
 import recordstore as rs
 from ontodag.eager import EagerOntoDAG
@@ -18,10 +25,13 @@ from categorio.db import now
 
 
 class Stores:
-    def __init__(self, directory, db):
+    def __init__(self, directory, db, max_stores=500, max_categories=2_000_000):
         self.directory = directory
         self.db = db
-        self._dags = {}
+        self.max_stores = max_stores
+        self.max_categories = max_categories
+        self._dags = OrderedDict()           # most recently used last
+        self._sizes = {}
         self._lock = threading.RLock()
         os.makedirs(directory, exist_ok=True)
 
@@ -47,14 +57,38 @@ class Stores:
             if dag is None:
                 dag = EagerOntoDAG(self._record_store(user))
                 self._dags[user] = dag
+                self._sizes[user] = len(dag.nodes)
+                self._trim(keep=user)
+            else:
+                self._dags.move_to_end(user)
             return dag
+
+    def loaded(self):
+        """How many stores are in memory, and how many categories they hold."""
+        with self._lock:
+            return len(self._dags), sum(self._sizes.values())
+
+    def _trim(self, keep):
+        """Let the least recently used stores go until within both limits."""
+        while len(self._dags) > 1 and (len(self._dags) > self.max_stores
+                                       or sum(self._sizes.values()) > self.max_categories):
+            oldest = next(iter(self._dags))
+            if oldest == keep:
+                self._dags.move_to_end(oldest)
+                continue
+            self._forget(oldest)
 
     def revision(self, user):
         return self.get(user).base_root
 
+    def reload(self, user):
+        """Drop the in-memory copy; the next read loads the last commit."""
+        self._forget(user)
+
     def _forget(self, user):
         with self._lock:
             self._dags.pop(user, None)
+            self._sizes.pop(user, None)
 
     # ---- writing -------------------------------------------------------------
 
@@ -67,6 +101,8 @@ class Stores:
             dag.put(names.address(user), [])
             dag.commit(message="created")
             self._dags[user] = dag
+            self._sizes[user] = len(dag.nodes)
+            self._trim(keep=user)
         self.register(names.address(user), user)
         self._reindex(user)
 
@@ -81,6 +117,8 @@ class Stores:
             except Exception:
                 self._forget(user)
                 raise
+            self._sizes[user] = len(dag.nodes)
+            self._trim(keep=user)
         self._reindex(user)
         return result
 

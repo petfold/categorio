@@ -7,10 +7,24 @@
   It is an ordinary OntoDAG store: the export opens with <code>odag -f {{ user }}.od</code>.</p>
 
 <div class="pair">
-  <div class="tool">
+  <form method="get" action="{{ url_for('export') }}" class="tool">
     <h3>Export</h3>
-    <p><a href="{{ url_for('export') }}">Download {{ user }}.od</a></p>
-  </div>
+    <p class="small muted">Your store, with the public categories your things hang from.</p>
+    <details{% if include %} open{% endif %}>
+      <summary class="small">Also include whole packs</summary>
+      <p class="small muted">For a file that carries a pack complete, for example to use with
+        <code>odag</code> on your own computer. Nothing is added to your store.</p>
+      {% for n in used %}
+        <label class="choice"><input type="checkbox" name="pack" value="{{ n }}"
+          {% if n in include %}checked{% endif %}> {{ n }} <span class="muted">— you use it</span></label>
+      {% endfor %}
+      {% for n in others %}
+        <label class="choice"><input type="checkbox" name="pack" value="{{ n }}"
+          {% if n in include %}checked{% endif %}> {{ n }}</label>
+      {% endfor %}
+    </details>
+    <button>Download</button>
+  </form>
   <form method="post" action="{{ url_for('import_preview') }}" enctype="multipart/form-data" class="tool">
     <h3>Import</h3>
     {{ csrf() }}

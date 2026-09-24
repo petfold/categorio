@@ -29,6 +29,17 @@ wrong, not just slow: OntoDAG's subsumption is transitive, so in one merged
 graph Bob's `rex ⊑ dog` would put `rex` below everyone who can see `dog`.
 Keeping stores separate is what makes classification private.
 
+**Memory.** The public vocabulary is held once per server process and
+shared by every reader (about 17 MB for all packs). Nothing copies it:
+pack pages read their top categories from the pack's entry list, and a
+pack download is built when asked for. A user's store holds only what they
+filed and the public chain above it, typically around 100 kB. The most
+recently used stores stay in memory, within limits on their number and
+total size, and the rest reload from disk when needed. So "not loading" a
+pack has no meaning here, as it would on your own computer: its categories
+are there either way, and the part of a pack that is really *yours*, the
+names you used, is already all your store holds.
+
 SQL holds only the login records: username and password hash; every
 address ever registered, so none is reused; and what already sat below an
 address in other stores when it was registered (§10). It also keeps an
@@ -66,7 +77,7 @@ you file under it stays yours, as with any public category. On a category
 of yours, the page lists your things first and folds the vocabulary's
 subcategories behind a link, so a persona called `work` isn't buried under
 406 public ones. Whether personas should be able to shadow a public name
-is an open question (§12).
+is an open question (§13).
 
 A handful of **setting names** are fixed by the site and used in your own
 store: `hide-requests`, `show-requests`, `blocked`, and in the public store
@@ -196,6 +207,9 @@ pseudonyms are on the roadmap.
 
 ## 8. Files
 
+- **Export** can also include whole packs. The file then carries each chosen
+  pack complete, merged in as `odag pack NAME` would, for use with `odag`
+  elsewhere. It's built when you download it; nothing is added to your store.
 - **Export** writes your store as `.od`, and the file is self-contained.
   Your store keeps the public ancestors of every public category you use,
   as `odag excerpt --context` does (`rex ⊑ dog` brings `dog`'s chain up to
@@ -273,7 +287,40 @@ What this takes:
   are your personas.
 - **SQL** shrinks to logins.
 
-## 12. Open question
+## 12. Pictures and the console
+
+**Pictures show what the page shows.** A picture draws one category with
+its parents and children, in the style of OntoDAG's visualiser (Graphviz
+`dot`). It is drawn from the viewer's view, never from a store, because a
+store's picture would show edges the viewer may not see: a shared
+category's private parents, or the other members of a group. Names are
+never markup. Graphviz escapes them in its SVG, and they are passed as
+plain text rather than Graphviz HTML labels.
+
+**The console runs a safe subset of the `odag` command language.**
+OntoDAG's own web app runs a subset over an in-memory sandbox; here the
+stores are real, so the rules are stricter:
+
+| Commands | Where they run | Why |
+|---|---|---|
+| `get` `count` `list` `show` `below` `?` `overlapping` `overlaps` `meet` `canon` `help` | your store, or the public vocabulary; visitors get the vocabulary only | questions: they change nothing (checked afterwards: if the node count changed, the store is reloaded and the vocabulary rebuilt) |
+| `put` `move` `remove` | your store only | tried on a copy first; an address of another site is refused; a change that stops someone seeing something waits for "Run anyway" (§9) |
+| `history` `status` `undo` `redo` | your store only | the same history as the Store page |
+| `import` `merge` `ingest` `export` `excerpt` `diff` `visualize` `-o FILE` | nowhere | they read or write files on the server; the site has upload, download and pictures instead |
+| `set` `swarm` `index` | nowhere | they change the server's settings, or reach out from it |
+| `pack` (list), `pack NAME --show`, `--diff`, `prelude --show` | anyone; `--diff` on the chosen store | looking only |
+| `pack NAME`, `prelude` | nowhere | adopting would copy the whole pack into your store, a second copy per user of what every store already shares (§2, memory). You use a pack by filing under its names; to take one away whole, **Store → Export** can include it in the file, merged on the way out |
+| `web` | nowhere | it's what you're looking at |
+
+The list is explicit: a command added to OntoDAG later stays unavailable
+until someone decides it is safe. Each command runs against one DAG
+through a session that never composes the server's `overlays`, so an
+answer can't include another store. Writes also bring in what the buttons
+would: the public ancestors of the names used, and this site's addresses
+(as the Share button adds them). Every page has an **As a command** link
+showing its question in this language.
+
+## 13. Open question
 
 **Should a persona be able to shadow a public name?** Today `work` in your
 store *is* the vocabulary's `work`, merged by name as everywhere in

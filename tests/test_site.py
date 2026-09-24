@@ -347,3 +347,124 @@ def test_guide(app, people):
     page = Browser(app).text("/guide")
     for anchor in re.findall(r'href="#([^"]+)"', page):
         assert f'id="{anchor}"' in page, anchor
+
+
+# ---- the console -------------------------------------------------------------
+
+def run(b, line, scope=None, **extra):
+    """The console's newest answer (or the confirmation it asks for)."""
+    data = {"line": line, **extra}
+    if scope:
+        data["scope"] = scope
+    page = b.say("/console", data)
+    entries = re.findall(r'<div class="entry[^"]*">(.*?)</div>', page, re.S)
+    return entries[-1] if entries else page
+
+
+def test_console_for_visitors(app):
+    b = Browser(app)
+    assert "coffee-maker" in run(b, "get device kitchen-appliance")
+    assert "true" in run(b, "below dog animal")
+    assert "weight(3kg)" in run(b, "canon weight(3000g)")
+    assert "needs an account" in run(b, "put rex dog")
+    assert "needs an account" in run(b, "put rex dog", scope="mine")   # a visitor has no store
+    assert "writes a file on the server" in run(b, "export all.od")
+    assert "would write a file on the server" in run(b, "get dog -o /tmp/x")
+    assert "biology v" in run(b, "pack")                           # looking is for anyone
+    assert "cell" in run(b, "pack biology --show")
+    assert "second copy" in run(b, "pack biology")                 # adopting would copy it
+    assert "server&#39;s settings" in run(b, "set store rs:/tmp/x")
+    assert "is not a command here" in run(b, "rm -rf /")
+    page = b.text("/console")
+    assert "Commands" in page and "not here" in page
+
+
+def test_console_on_your_store(app, people):
+    ada, bob = people("ada", "bob")
+    run(ada, "put rex dog", scope="mine")
+    assert "/c/rex" in ada.text("/c/dog")                        # the page sees the console's work
+    assert "rex" in run(ada, "get animal", scope="mine")         # the public chain came along
+    assert "rex" not in run(ada, "get dog", scope="public")      # the vocabulary is untouched
+    assert "rex" not in run(Browser(app), "get dog")
+    assert "changes a store" in run(ada, "put x dog", scope="public")
+    assert "not a categor.io address" in run(ada, "put mallory@example.com", scope="mine")
+    assert "unknown super-category" in run(ada, "put rex mallory@example.com", scope="mine")
+
+    run(ada, "put photos", scope="mine")
+    run(ada, f"put photos bob@{D}", scope="mine")                # sharing, typed
+    bob.say("/accept", {"sender": f"ada@{D}", "under": ""})
+    assert bob.get("/from/ada/c/photos").status_code == 200
+
+    page = run(ada, "remove photos", scope="mine")               # bob would lose it: ask first
+    assert "This stops people seeing things" in page and "Run anyway" in page
+    assert bob.get("/from/ada/c/photos").status_code == 200
+    run(ada, "remove photos", scope="mine", confirm="1")
+    assert bob.get("/from/ada/c/photos").status_code == 404
+
+    assert "+ item" in run(ada, "pack biology --diff", scope="mine")   # looking is fine
+    assert "second copy" in run(ada, "pack biology", scope="mine")     # copying in is not
+    assert "undid" in run(ada, "undo", scope="mine")
+    assert bob.get("/from/ada/c/photos").status_code == 200
+    assert "console: remove photos" in run(ada, "history", scope="mine")
+
+
+def test_the_page_offers_its_command(app):
+    page = Browser(app).text("/q?t=artifact&t=container")
+    assert "/console?scope=public&amp;line=get%20artifact%20container" in page
+
+
+# ---- pictures ----------------------------------------------------------------
+
+def test_pictures(app, people):
+    b = Browser(app)
+    page = b.text("/c/device?show=picture")
+    assert "<svg" in page and 'xlink:href="/c/artifact"' in page and "more" in page
+    assert "class=\"picture\"" not in b.text("/c/device")
+
+    acme, ada = people("acme", "ada")
+    acme_setup(acme)
+    acme.put("<b>bold</b>", "employee-information")
+    ada.say("/accept", {"sender": f"acme@{D}", "under": ""})
+    page = ada.text("/from/acme/c/employee-information?show=picture")
+    assert "handbook" in page and "employees" in page
+    assert "merger-plans" not in page                  # the picture shows only what you may see
+    assert "<b>bold</b>" not in page and "&lt;b&gt;bold&lt;/b&gt;" in page
+
+
+# ---- packs and memory --------------------------------------------------------
+
+def test_whole_packs_go_in_the_export_not_the_store(app, people):
+    (ada,) = people("ada")
+    ada.put("my-culture", "gene")
+    store = ada.text("/store")
+    assert "biology" in store and "you use it" in store
+    before = len(ada.get("/store/export").get_data(as_text=True).splitlines())
+    whole = ada.get("/store/export?pack=biology")
+    assert whole.headers["Content-Disposition"].endswith('ada+biology.od"')
+    text = whole.get_data(as_text=True)
+    assert "chromosome" in text and "my-culture gene" in text
+    assert ontology.parse(text).is_below("my-culture", "physical-object")
+    after = len(ada.get("/store/export").get_data(as_text=True).splitlines())
+    assert before == after                                  # nothing was added to the store
+
+
+def test_pack_pages_need_no_pack_copies(app):
+    import categorio.ontology as o
+    assert not hasattr(o, "_packs_built")
+    b = Browser(app)
+    assert "/c/physical-object" in b.text("/packs/core")
+    assert "/c/dimension" in b.text("/packs/core")       # core ships with the prelude
+    for name in o.pack_names():                          # the same tops OntoDAG's pack DAGs have
+        assert o.pack_top(name) == sorted(n.name for n in o.pack_dag(name).root.neighbors), name
+
+
+def test_stores_in_memory_are_capped(app, people):
+    stores = app.extensions["site"].stores
+    stores.max_stores = 2
+    b = people("ada", "bob", "carol", "dave")
+    for person, name in zip(b, ("a1", "b1", "c1", "d1")):
+        person.put(name)
+    assert stores.loaded()[0] <= 2
+    for person, name in zip(b, ("a1", "b1", "c1", "d1")):   # reloaded from disk, intact
+        assert f"/c/{name}" in person.text("/")
+        assert stores.loaded()[0] <= 2

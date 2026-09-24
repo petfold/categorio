@@ -10,6 +10,7 @@ order the first time. If you have an account, try each step as you go.
 - [Part 3: Sharing](#part-3-sharing)
 - [Part 4: Receiving](#part-4-receiving)
 - [Part 5: Your store as a whole](#part-5-your-store-as-a-whole)
+- [Part 6: Pictures and the console](#part-6-pictures-and-the-console)
 - [Good to know](#good-to-know)
 - [Words used on the site](#words-used-on-the-site)
 
@@ -313,13 +314,67 @@ Click **Store** at the top of any page.
 
 - **Export** downloads your whole store as one file (*ada.od*). It's a plain
   text file in OntoDAG's own format, which you can keep as a backup. People
-  who use OntoDAG's command-line tool, `odag`, can open it directly.
+  who use OntoDAG's command-line tool, `odag`, can open it directly. Under
+  **Also include whole packs** you can add complete packs to the file, for
+  example all of biology to work with on your own computer. The packs you
+  already use are listed first. This changes only the file, not your store.
 - **Import** adds the contents of such a file to your store. First click
   **Preview**. You see what would be added, and whether the file would share
   anything with anyone, *before* anything changes. Then click **Merge into
   my store**, or cancel.
 - **History** lists every change you've made, newest first, with **Undo**
   and **Redo**.
+
+---
+
+## Part 6: Pictures and the console
+
+### Step 20: See a category as a picture
+
+Below the name of every category are three links: **List**, **Picture**
+and **As a command**. Click **Picture**. The category appears in the
+middle, highlighted, with the categories it sits in on one side and the
+ones inside it on the other. Every box is a link, so you can walk around
+by clicking boxes.
+
+A picture only ever shows what you can see yourself. On something shared
+with you, the owner's private categories don't appear, just as they don't
+appear in the list.
+
+### Step 21: Ask the same thing as a command
+
+OntoDAG has its own short command language. The **Console** link at the
+top of every page opens it. Type a command after **odag ▸** and click
+**Run**:
+
+- `get device kitchen-appliance` lists what is both a device and a kitchen
+  appliance;
+- `count animal` says how many categories are below *animal*;
+- `below rex animal` answers *true* or *false*: is Rex below *animal*?
+- `canon weight(3000g)` shows how a value is stored: *weight(3kg)*.
+
+You don't need to learn this. Every page has an **As a command** link that
+opens the console with that page's question already typed in, so you can
+pick it up by looking.
+
+When you're signed in, choose where commands run: **Your store** or
+**Public vocabulary**. In your store you can also change things:
+
+- `put holiday-photos` adds a category, and `put rex hobby` files Rex
+  under *hobby*;
+- `put photos bob@categor.io` shares *photos* with Bob, exactly like the
+  Share button;
+- `remove photos` removes a category;
+- `undo` takes back your last change, and `history` lists your changes;
+- `pack biology --show` lists everything in the biology pack.
+
+As on the pages, if a command would stop someone seeing something, the
+console asks first and waits for you to click **Run anyway**.
+
+Some OntoDAG commands never run here, because they would read or write
+files on the site's computer or change its settings. The list below the
+console shows every command, and why any that can't run here are
+unavailable.
 
 ---
 
@@ -330,6 +385,10 @@ the vocabulary already has, such as *work*, *hobby* or *family*, you get
 the public one. What you file under it is still private. On your own
 categories the site lists your things first; the public subcategories are
 behind a link such as **11 public categories under work**.
+
+**Every pack is ready to use.** You never need to add a pack before using
+it. File your things under *gene* or *enzyme* (biology), *exoplanet*
+(space) or *antiviral* (medicine) straight away, as with *dog*.
 
 **Nobody can search for you.** The site never lists accounts. To share with
 someone you need their address, the way you need an email address.
@@ -363,4 +422,6 @@ learn whether you accepted, blocked or ignored them.
 | **Request** | A first share from someone you haven't accepted yet: their name and a count, nothing more. |
 | **Accept** | File the sender in your store, so that what they share appears. |
 | **Block** | Hide everything from a sender, including their requests. |
+| **Picture** | A drawing of a category with what it sits in and what is inside it. |
+| **Console** | A place to type OntoDAG commands, such as `get dog`, instead of clicking. |
 | **OntoDAG** | The system underneath: categories that can have several parents. The name comes from "ontology" (an arrangement of categories) and "DAG" (a network with no loops). |

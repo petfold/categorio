@@ -17,6 +17,14 @@
   /q?{% for t in terms %}t={{ t|urlencode }}{% if not loop.last %}&amp;{% endif %}{% endfor %}
 {%- endmacro %}
 
+{% macro tabs(base, command=None, scope='public') -%}
+<p class="tabs">
+  <a href="{{ base }}"{% if request.args.show != 'picture' %} aria-current="page"{% endif %}>List</a>
+  <a href="{{ base }}?show=picture"{% if request.args.show == 'picture' %} aria-current="page"{% endif %}>Picture</a>
+  {% if command %}<a href="/console?scope={{ scope }}&amp;line={{ command|urlencode }}" title="The same question in the OntoDAG command language">As a command</a>{% endif %}
+</p>
+{%- endmacro %}
+
 {% macro csrf() %}<input type="hidden" name="csrf" value="{{ csrf_token() }}">{% endmacro %}
 
 {% macro here() %}<input type="hidden" name="back" value="{{ request.full_path }}">{% endmacro %}

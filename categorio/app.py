@@ -3,16 +3,19 @@ of its own, and sharing by filing (docs/DESIGN.md)."""
 
 import os
 import secrets
+import shlex
 import threading
 from functools import wraps
 from urllib.parse import quote
 
 from flask import (Flask, Response, abort, flash, g, redirect, render_template,
                    request, session, url_for)
+from markupsafe import Markup
 from ontodag import dimensions
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from categorio import names, ontology
+from categorio import names, ontology, picture
+from categorio.console import Console, commands as console_commands
 from categorio.db import Database, now
 from categorio.sharing import Sharing
 from categorio.stores import Stores
@@ -31,9 +34,11 @@ class Site:
     def __init__(self, directory):
         os.makedirs(directory, exist_ok=True)
         self.db = Database(os.path.join(directory, "logins.sqlite"))
-        self.stores = Stores(os.path.join(directory, "stores"), self.db)
+        self.stores = Stores(os.path.join(directory, "stores"), self.db,
+                             max_stores=int(os.environ.get("CATEGORIO_STORES_IN_MEMORY", 500)))
         self.sharing = Sharing(self.stores)
         self.imports = {}                  # token -> (user, dag), awaiting confirmation
+        self.console = Console(self)
 
 
 def create_app(config=None):
@@ -60,6 +65,7 @@ def create_app(config=None):
 
     app.jinja_env.filters["seg"] = lambda name: quote(name, safe="()=,-_.~*+:@")
     app.jinja_env.filters["short"] = names.short
+    app.jinja_env.filters["shq"] = shlex.quote
     app.jinja_env.globals["DOMAIN"] = names.DOMAIN
     _register(app)
     return app
@@ -159,6 +165,16 @@ def edit(change, message, confirm_text=None):
     return None
 
 
+def console_context(dag, tokens):
+    """What a typed write needs first, as the buttons provide it: the public
+    ancestors of the public names it uses, and the addresses of this site it
+    names (as the Share button adds them)."""
+    with_context(dag, tokens)
+    for token in tokens:
+        if names.parse_address(token) and token not in dag.nodes:
+            dag.put(token, [])
+
+
 def split_names(text):
     return [n.strip() for n in text.split(",") if n.strip()]
 
@@ -246,14 +262,12 @@ def _register(app):
 
     @app.get("/packs/<name>")
     def pack(name):
-        try:
-            dag = ontology.pack_dag(name)
-        except KeyError:
+        if name not in ontology.pack_names():
             abort(404)
         pub = ontology.public()
         top = [{"kind": "public", "name": n, "has_children": bool(pub.nodes[n].neighbors),
                 "count": pub.nodes[n].descendant_count}
-               for n in ontology.children(dag, names.ROOT) if n in pub.nodes]
+               for n in ontology.pack_top(name) if n in pub.nodes]
         top.sort(key=lambda e: (not e["has_children"], e["name"]))
         return render_template("pack.html", info=ontology.pack_summary(name), top=top)
 
@@ -266,12 +280,22 @@ def _register(app):
         version = ontology.pack_summary(name)["version"]
         return download(ontology.serialize(dag), f"{name}-v{version}.od")
 
+    def drawing(focus, view):
+        """The picture of a page, when it asked for one (`?show=picture`)."""
+        if request.args.get("show") != "picture":
+            return None
+        try:
+            return Markup(picture.draw(focus, view["above"], view["below"]))
+        except Exception as exc:              # no Graphviz on this server, or a render error
+            return Markup("<p class='empty'>No picture: {}</p>").format(exc)
+
     @app.get("/c/<path:name>")
     def node(name):
         view = View(site(), g.user).node(name)
         if view is None:
             abort(404)
-        return render_template("node.html", view=view)
+        focus = {"kind": view["kind"], "name": name}
+        return render_template("node.html", view=view, svg=drawing(focus, view))
 
     @app.get("/from/<owner>/c/<path:name>")
     @login_required
@@ -279,7 +303,33 @@ def _register(app):
         view = View(site(), g.user).foreign(owner, name)
         if view is None:
             abort(404)
-        return render_template("foreign.html", view=view)
+        focus = {"kind": "foreign", "owner": owner, "name": name}
+        return render_template("foreign.html", view=view, svg=drawing(focus, view))
+
+    @app.route("/console", methods=["GET", "POST"])
+    def console():
+        scope = request.values.get("scope") or ("mine" if g.user else "public")
+        if g.user is None:
+            scope = "public"
+        if "console" not in session:
+            session["console"] = secrets.token_urlsafe(12)
+        transcript = site().console.transcript(session["console"])
+        pending = None
+        if request.method == "POST":
+            line = request.form.get("line", "").strip()
+            result = site().console.run(
+                g.user, scope, line, confirm=bool(request.form.get("confirm")),
+                context=console_context)
+            if result.losses:
+                pending = result
+            else:
+                transcript.append(result)
+            return render_template("console.html", scope=scope, transcript=list(transcript),
+                                   pending=pending, prefill="" if not pending else line,
+                                   groups=console_commands())
+        return render_template("console.html", scope=scope, transcript=list(transcript),
+                               pending=None, prefill=request.args.get("line", ""),
+                               groups=console_commands())
 
     @app.get("/q")
     def query():
@@ -521,13 +571,22 @@ def _register(app):
     @login_required
     def store():
         versions, status = site().stores.history(g.user)
+        used = ontology.packs_used(own())
+        others = [n for n in ontology.pack_names() if n not in used and n != "prelude"]
         return render_template("store.html", versions=versions[:30], status=status,
-                               size=len(own().nodes) - 1)
+                               size=len(own().nodes) - 1, used=used, others=others,
+                               include=request.args.getlist("include"))
 
     @app.get("/store/export")
     @login_required
     def export():
-        return download(ontology.serialize(own()), f"{g.user}.od")
+        """Your store as `.od`. With `?pack=NAME`, the whole of each chosen
+        pack goes into the file too, merged on the way out: a file that
+        carries the pack without a copy of it kept in your store."""
+        chosen = [n for n in request.args.getlist("pack") if n in ontology.pack_names()]
+        dag = ontology.with_packs(own(), chosen) if chosen else own()
+        suffix = ("+" + "+".join(chosen)) if chosen else ""
+        return download(ontology.serialize(dag), f"{g.user}{suffix}.od")
 
     @app.post("/store/import")
     @act

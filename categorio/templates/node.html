@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import entry, entries, link, query_url, csrf, here with context %}
+{% from "_macros.html" import entry, entries, link, query_url, csrf, here, tabs with context %}
 {% block title %}{{ view.name|short }}{% endblock %}
 {% block main %}
 <div class="layout">
@@ -30,7 +30,12 @@
     {% endif %}
   {% endif %}
 
-  {% if view.kind == 'address' and not view.yours %}
+  {{ tabs(request.path, None if view.kind == 'address' else 'get ' ~ (view.name|shq),
+          'mine' if (view.mine and user) else 'public') }}
+
+  {% if svg %}
+    <div class="picture">{{ svg }}</div>
+  {% elif view.kind == 'address' and not view.yours %}
     <h2 class="section">What {{ view.short }} shares with you</h2>
     {% if view.blocked %}<p class="empty">Nothing is shown while {{ view.short }} is blocked.</p>
     {% elif view.below|selectattr('kind', 'equalto', 'foreign')|list %}

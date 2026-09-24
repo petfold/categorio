@@ -58,18 +58,53 @@ def pack_summary(name):
 
 
 _lock = threading.Lock()
-_packs_built = {}
 _public = None
+_members = {}
 
 
 def pack_dag(name):
-    """One pack on its own, for its entry page and its download."""
+    """One pack on its own, as OntoDAG builds it: for a download. Built on
+    request and not kept — the site holds one copy of the vocabulary, the
+    public store, and everything else reads that."""
     if name not in _packs.PACKS:
         raise KeyError(name)
-    with _lock:
-        if name not in _packs_built:
-            _packs_built[name] = _packs.pack_dag(name)
-        return _packs_built[name]
+    return _packs.pack_dag(name)
+
+
+def pack_members(name):
+    """The names a pack brings, from its entry list (no DAG is built)."""
+    if name not in _members:
+        _members[name] = frozenset(node for node, _parents in _packs.pack_entries(name))
+    return _members[name]
+
+
+def pack_top(name):
+    """A pack's top categories — what `pack_dag(name)` has directly under its
+    root — read from the entry list: every name the pack mentions that it
+    never files under anything. (For a domain pack that includes the core
+    names it hangs from, as OntoDAG's own pack DAG does.)"""
+    entries = _packs.pack_entries(name)
+    if (name != "prelude" and not _packs.presumes_core(name)
+            and _packs.presumes_prelude(name)):
+        entries = entries + _packs.pack_entries("prelude")   # it ships as closure, as in pack_dag
+    mentioned = {node for node, _ in entries} | {p for _, parents in entries for p in parents}
+    filed = {node for node, parents in entries if parents}
+    return sorted(mentioned - filed)
+
+
+def packs_used(dag):
+    """The packs a store uses at least one name of, in listing order."""
+    present = set(dag.nodes)
+    return [n for n in pack_names() if n != "prelude" and pack_members(n) & present]
+
+
+def with_packs(dag, chosen):
+    """A copy of `dag` with the whole of each chosen pack merged in, as
+    `odag pack NAME` would do — for an export, built when asked for."""
+    copy = dag.deepcopy()
+    for name in chosen:
+        _packs.apply(copy, name)
+    return copy
 
 
 def public():
@@ -85,10 +120,15 @@ def public():
     return _public
 
 
+def reset_public():
+    """Throw the public store away, to be rebuilt on next use."""
+    global _public
+    with _lock:
+        _public = None
+
+
 def warm():
     public()
-    for name in pack_names():
-        pack_dag(name)
 
 
 def is_public(name):

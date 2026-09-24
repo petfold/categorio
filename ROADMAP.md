@@ -14,9 +14,13 @@ The design is in [docs/DESIGN.md](docs/DESIGN.md).
 - [x] Anonymous browsing of the public store
 - [x] Unknown addresses refused silently; shares from before registration ignored; addresses never reused (DESIGN §10)
 
+- [x] Pictures (Graphviz, from the viewer's view) and a console for the safe subset of `odag` (DESIGN §12)
+
+- [x] Memory: one shared public vocabulary, no per-pack copies, a cap on user stores in memory; whole packs go into exports, not stores (DESIGN §2, §8)
+
 ## Next
 
-- [ ] Decide whether personas may shadow a public name (DESIGN §12)
+- [ ] Decide whether personas may shadow a public name (DESIGN §13)
 - [ ] Suggest addresses already in your store while typing one (DESIGN §10)
 - [ ] Editing the public store through `maintain-packs` (DESIGN §7); pack upgrades refreshing the public chains stores keep
 - [ ] Account deletion (its address stays reserved)
@@ -25,7 +29,7 @@ The design is in [docs/DESIGN.md](docs/DESIGN.md).
 
 - [ ] Write access for others: "share with edit", e.g. a department head managing Acme's `sales`
 - [ ] Contributions: members filing their own items into a shared category
-- [ ] Cross-store names: filing your note under a node shared with you, or hiding one of a sender's groups
+- [ ] Cross-store names: filing your note under a node shared with you, or hiding one of a sender's groups. Also the way to company packs: employees file under Acme's own categories instead of each keeping a copy
 - [ ] Unlinkable pseudonyms: addresses that don't reveal the account behind them
 - [ ] Other sites: addresses at other domains
 - [ ] Messaging: threads, replies, notifications

@@ -5,6 +5,10 @@
 <h1>{{ info.name }}</h1>
 <p class="muted small">public pack · v{{ info.version }} · {{ info.size }}</p>
 {% if info.about %}<p class="lede">{{ info.about }}</p>{% endif %}
+<p class="small muted">Every category here is ready to use: {% if user %}file your own things under
+  any of them{% else %}<a href="{{ url_for('register') }}">create an account</a> and file your own things under
+  any of them{% endif %}, with nothing to install. {% if user %}To take the whole pack away in a
+  file, <a href="{{ url_for('store', include=info.name) }}">include it in your export</a>.{% endif %}</p>
 {{ entries(top) }}
 <p class="small"><a href="{{ url_for('pack_download', name=info.name) }}">Download {{ info.name }}.od</a></p>
 {% endblock %}

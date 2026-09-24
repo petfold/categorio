@@ -28,12 +28,22 @@ A website over [OntoDAG](https://github.com/petfold/ontodag).
   them.
 - **Addresses tied to a category.** `ada+work@categor.io` puts what's sent
   to it into `work`, with its own setting for requests.
+- **Pictures and a console.** Every category can be drawn as a picture of
+  what you may see. The console runs the `odag` command language:
+  questions anywhere, and changes on your own store, through the same
+  checks as the buttons. Commands that touch the server's files or settings
+  are refused, with the reason (DESIGN §12).
 - **Your store as a whole:** history with undo and redo, and export and
   import as a self-contained `.od` file that `odag -f` reads directly. An
+  export can include whole packs, merged into the file on the way out. An
   import shows whom it would share with before anything changes, and any
   change that would take something away from someone asks first.
 
 ## Run
+
+Pictures need Graphviz's `dot` program (`apt install graphviz`, `brew
+install graphviz`). Without it, everything else works and a picture says
+why it can't be drawn.
 
 ```bash
 pip install -e ".[test]"
@@ -53,8 +63,10 @@ export CATEGORIO_SECURE_COOKIES=1      # behind HTTPS
 gunicorn -w 1 --threads 8 'categorio:create_app()'
 ```
 
-Use one worker process. Each store is held in memory once loaded, and
-writes are serialised inside the process.
+Use one worker process: writes are serialised inside it, and it holds one
+shared copy of the public vocabulary (about 17 MB). User stores stay in
+memory while recently used. `CATEGORIO_STORES_IN_MEMORY` sets how many
+(default 500); the rest reload from disk when needed.
 
 ## Layout
 
@@ -67,6 +79,10 @@ writes are serialised inside the process.
   what an edit would take away (§9).
 - `categorio/views.py`: what one viewer sees, combined per page from their
   store, the public store, and what's shared with them.
+- `categorio/picture.py`: a category and its neighbours as SVG, drawn from
+  the viewer's view.
+- `categorio/console.py`: the `odag` commands allowed on the site, and how
+  each runs.
 - `categorio/app.py`: routes.
 - `categorio/db.py`: SQLite for login records, registered addresses, and an
   index of which store mentions which address.

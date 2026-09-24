@@ -18,6 +18,7 @@
     <nav>
       {% set page = request.endpoint %}
       <a href="{{ url_for('home') }}"{% if page == 'home' %} aria-current="page"{% endif %}>Home</a>
+      <a href="{{ url_for('console') }}"{% if page == 'console' %} aria-current="page"{% endif %}>Console</a>
       <a href="{{ url_for('guide') }}"{% if page == 'guide' %} aria-current="page"{% endif %}>Guide</a>
       {% if user %}
         <a href="{{ url_for('store') }}"{% if page == 'store' %} aria-current="page"{% endif %}>Store</a>

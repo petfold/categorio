@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import entry, entries, link with context %}
+{% from "_macros.html" import entry, entries, link, tabs with context %}
 {% block title %}{{ view.name }} · {{ view.owner }}{% endblock %}
 {% block main %}
 <article class="wide">
@@ -12,7 +12,10 @@
   {% if view.above %}
     <p class="under">under {% for e in view.above %}{{ entry(e) }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
   {% endif %}
-  {% if view.below %}
+  {{ tabs(request.path) }}
+  {% if svg %}
+    <div class="picture">{{ svg }}</div>
+  {% elif view.below %}
     {{ entries(view.below) }}
   {% else %}
     <p class="empty">Nothing under {{ view.name }} is shared with you.</p>

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "_macros.html" import link, csrf with context %}
+{% block title %}Console{% endblock %}
+{% block main %}
+<h1>Console</h1>
+<p class="lede">The OntoDAG command language. Typing here and clicking around the site are two
+  ways of doing the same things: each page has an <em>As a command</em> link that shows its
+  question in this language.</p>
+
+{% if user %}
+<p class="tabs">
+  <a href="{{ url_for('console', scope='mine') }}"{% if scope == 'mine' %} aria-current="page"{% endif %}>Your store</a>
+  <a href="{{ url_for('console', scope='public') }}"{% if scope == 'public' %} aria-current="page"{% endif %}>Public vocabulary</a>
+</p>
+<p class="muted small">{% if scope == 'mine' %}Commands run on your own store, which only you can see. Changes are saved, and <code>undo</code> takes them back.
+  {% else %}Questions only: the public vocabulary can't be changed from here.{% endif %}</p>
+{% else %}
+<p class="muted small">You're asking the public vocabulary. <a href="{{ url_for('login', next=request.full_path) }}">Sign in</a> to run commands on a store of your own.</p>
+{% endif %}
+
+<div class="terminal">
+  {% for r in transcript %}
+    <div class="entry">
+      <pre class="line">odag ▸ {{ r.line }}{% if user %}<span class="scope">{{ 'your store' if r.scope == 'mine' else 'public' }}</span>{% endif %}</pre>
+      {% if r.out %}<pre class="out">{{ r.out }}</pre>{% endif %}
+      {% if r.err %}<pre class="err">{{ r.err }}</pre>{% endif %}
+    </div>
+  {% endfor %}
+
+  {% if pending %}
+    <div class="entry pending">
+      <pre class="line">odag ▸ {{ pending.line }}</pre>
+      <p><strong>This stops people seeing things.</strong></p>
+      {% for address, gone in pending.losses.items() %}
+        <p>{{ address|short }} would no longer see: {{ gone|join(', ') }}</p>
+      {% endfor %}
+      <form method="post" action="{{ url_for('console') }}" class="inline">
+        {{ csrf() }}
+        <input type="hidden" name="scope" value="{{ scope }}">
+        <input type="hidden" name="line" value="{{ pending.line }}">
+        <input type="hidden" name="confirm" value="1">
+        <button>Run anyway</button>
+      </form>
+      <a href="{{ url_for('console', scope=scope) }}" class="cancel">Cancel</a>
+    </div>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('console') }}" class="prompt">
+    {{ csrf() }}
+    <input type="hidden" name="scope" value="{{ scope }}">
+    <label for="line">odag ▸</label>
+    <input id="line" name="line" value="{{ prefill }}" autocomplete="off" autocapitalize="off"
+           spellcheck="false" autofocus placeholder="get device kitchen-appliance">
+    <button>Run</button>
+  </form>
+</div>
+
+<h2 class="section">Commands</h2>
+<p class="small muted">All of OntoDAG's commands, and whether they run here. Some never will:
+  they read or write files on the server, or change its settings.</p>
+{% for title, rows in groups %}
+  <h3>{{ title }}</h3>
+  <table class="commands">
+    {% for c in rows %}
+    <tr{% if not c.where %} class="off"{% endif %}>
+      <td><code>{{ c.name }}</code></td>
+      <td>{{ c.help }}</td>
+      <td class="where">{% if c.where %}{{ c.where }}{% else %}<span class="muted">not here: {{ c.why }}</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+{% endfor %}
+{% endblock %}

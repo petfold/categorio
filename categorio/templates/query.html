@@ -11,6 +11,7 @@
     {% endfor %}
   </h1>
 
+  <p class="tabs"><a href="/console?scope={{ 'mine' if user else 'public' }}&amp;line={{ ('get ' ~ view.terms|map('shq')|join(' '))|urlencode }}">As a command</a></p>
   <p class="muted">{{ '{:,}'.format(view.count) }} {{ 'category' if view.count == 1 else 'categories' }}
     {% if view.terms|length > 1 %}below all of these{% else %}below {{ view.terms[0] }}{% endif %}</p>
 
