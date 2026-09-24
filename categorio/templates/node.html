@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% from "_macros.html" import entry, entries, link, query_url, csrf, here with context %}
+{% block title %}{{ view.name|short }}{% endblock %}
+{% block main %}
+<div class="layout">
+<article>
+  {% if view.kind == 'address' %}
+    <h1 class="addr-title">{{ view.short }}</h1>
+    <p class="under">
+      {% if view.yours and view.base %}your address
+      {% elif view.yours %}your address for {% for p in view.placed %}{{ link(p) }}{% if not loop.last %}, {% endif %}{% endfor %}
+      {% else %}{{ view.name }}
+        {% if view.blocked %} · <strong>blocked</strong>{% endif %}
+        {% if view.placed %} · filed under {% for p in view.placed %}{{ link(p) }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}
+      {% endif %}
+    </p>
+  {% else %}
+    <h1>{{ view.name }}</h1>
+    <p class="under">
+      {% if view.kind == 'public' %}<span class="tag">public</span>{% endif %}
+      {% if view.above %}under
+        {% for e in view.above %}{{ entry(e) }}{% if not loop.last %}, {% endif %}{% endfor %}
+      {% else %}top level{% endif %}
+    </p>
+    {% if view.shared_with or view.through %}
+      <p class="under">shared with
+        {% for a in view.shared_with %}{{ link(a) }}{% if not loop.last %}, {% endif %}{% endfor %}
+        {%- if view.through %}{% if view.shared_with %}; {% endif %}through a group:
+          {% for a in view.through %}{{ link(a) }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</p>
+    {% endif %}
+  {% endif %}
+
+  {% if view.kind == 'address' and not view.yours %}
+    <h2 class="section">What {{ view.short }} shares with you</h2>
+    {% if view.blocked %}<p class="empty">Nothing is shown while {{ view.short }} is blocked.</p>
+    {% elif view.below|selectattr('kind', 'equalto', 'foreign')|list %}
+      {{ entries(view.below|selectattr('kind', 'equalto', 'foreign')|list) }}
+    {% else %}<p class="empty">Nothing.</p>{% endif %}
+    <h2 class="section">What you share with {{ view.short }}</h2>
+    {% if view.sharing %}
+      <ul class="cats">{% for n in view.sharing %}<li>{{ link(n) }}</li>{% endfor %}</ul>
+    {% else %}<p class="empty">Nothing.</p>{% endif %}
+  {% elif view.below %}
+    {{ entries(view.below) }}
+    {% if view.public_below %}
+      <p><a class="more" href="{{ query_url([view.name]) }}">{{ view.public_below }} public {{ 'category' if view.public_below == 1 else 'categories' }} under {{ view.name }}, and all below →</a></p>
+    {% elif view.count and view.count > view.below|length %}
+      <p><a class="more" href="{{ query_url([view.name]) }}">All {{ '{:,}'.format(view.count) }} below {{ view.name }} →</a></p>
+    {% endif %}
+  {% else %}
+    <p class="empty">Nothing is filed under {{ view.name|short }}{% if view.kind == 'address' %} yet{% endif %}.</p>
+  {% endif %}
+</article>
+
+<aside>
+{% if not user %}
+  <p class="tool muted small"><a href="{{ url_for('login', next=request.path) }}">Sign in</a> to file your own things under {{ view.name }}.</p>
+
+{% elif view.kind == 'address' and view.yours %}
+  <form method="post" action="{{ url_for('address_setting') }}" class="tool">
+    <h3>Requests at this address</h3>
+    {{ csrf() }}{{ here() }}
+    <input type="hidden" name="address" value="{{ view.name }}">
+    {% for value, label in [('default', 'as the account' if not view.base else 'shown (default)'), ('show', 'shown'), ('hide', 'hidden: accepted senders only')] %}
+      {% if not (view.base and value == 'show') %}
+      <label class="choice"><input type="radio" name="value" value="{{ value }}"
+        {% if (view.setting or 'default') == value %}checked{% endif %}> {{ label }}</label>
+      {% endif %}
+    {% endfor %}
+    <button>Save</button>
+  </form>
+  {% if not view.base %}
+  <details class="tool">
+    <summary>Remove this address</summary>
+    <form method="post" action="{{ url_for('remove') }}">
+      {{ csrf() }}
+      <input type="hidden" name="name" value="{{ view.name }}">
+      <p class="small muted">Shares sent to {{ view.short }} stop appearing. The address stays yours.</p>
+      <button class="danger">Remove</button>
+    </form>
+  </details>
+  {% endif %}
+
+{% elif view.kind == 'address' %}
+  <form method="post" action="{{ url_for('accept') }}" class="tool">
+    <h3>{% if view.placed or view.blocked %}File {{ view.short }} under{% else %}Accept {{ view.short }}{% endif %}</h3>
+    {{ csrf() }}
+    <input type="hidden" name="sender" value="{{ view.name }}">
+    <input name="under" placeholder="One of your categories (optional)" data-complete="/names">
+    <button>{% if view.blocked %}Unblock and file{% else %}File{% endif %}</button>
+  </form>
+  {% if view.blocked %}
+  <form method="post" action="{{ url_for('unblock') }}" class="tool">
+    {{ csrf() }}{{ here() }}
+    <input type="hidden" name="sender" value="{{ view.name }}">
+    <button>Unblock</button>
+  </form>
+  {% else %}
+  <form method="post" action="{{ url_for('block') }}" class="tool">
+    {{ csrf() }}{{ here() }}
+    <input type="hidden" name="sender" value="{{ view.name }}">
+    <button class="quiet">Block {{ view.short }}</button>
+  </form>
+  {% endif %}
+  <details class="tool">
+    <summary>Remove from your store</summary>
+    <form method="post" action="{{ url_for('remove') }}">
+      {{ csrf() }}
+      <input type="hidden" name="name" value="{{ view.name }}">
+      <p class="small muted">You stop accepting {{ view.short }}'s shares, and stop sharing with them.</p>
+      <button class="danger">Remove</button>
+    </form>
+  </details>
+
+{% else %}
+  {% set own_cat = view.kind == 'own' %}
+  <form method="post" action="{{ url_for('put') }}" class="tool">
+    <h3>{{ 'Add a category under this' if view.mine else 'File something of yours here' }}</h3>
+    {{ csrf() }}{{ here() }}
+    <input name="name" placeholder="Name" required maxlength="200" data-complete="/names">
+    <input type="hidden" name="parents" value="{{ view.name }}">
+    <button>Add</button>
+  </form>
+
+  <form method="post" action="{{ url_for('put') }}" class="tool">
+    <h3>File {{ view.name }} under</h3>
+    {{ csrf() }}{{ here() }}
+    <input type="hidden" name="name" value="{{ view.name }}">
+    <input name="parents" placeholder="Category" required data-complete="/names" data-multi>
+    <button>File</button>
+  </form>
+
+  {% if view.mine %}
+  <form method="post" action="{{ url_for('share') }}" class="tool">
+    <h3>Share with</h3>
+    {{ csrf() }}{{ here() }}
+    <input type="hidden" name="name" value="{{ view.name }}">
+    <input name="address" placeholder="name@{{ DOMAIN }}" required autocomplete="off">
+    <p class="small muted">Everything you file under {{ view.name }} goes with it.</p>
+    <button>Share</button>
+  </form>
+
+  {% set chips = view.own_above + ([me] if view.at_home else []) + view.shared_with %}
+  {% if chips %}
+  <div class="tool">
+    <h3>Take out from under</h3>
+    {% for p in chips %}
+    <form method="post" action="{{ url_for('unshare') if p in view.shared_with else url_for('unfile') }}" class="inline">
+      {{ csrf() }}{{ here() }}
+      <input type="hidden" name="name" value="{{ view.name }}">
+      <input type="hidden" name="{{ 'address' if p in view.shared_with else 'parent' }}" value="{{ p }}">
+      <button class="chip">{{ 'home' if p == me else p|short }} ×</button>
+    </form>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endif %}
+
+  {% if own_cat %}
+  <details class="tool">
+    <summary>Remove {{ view.name }}</summary>
+    <form method="post" action="{{ url_for('remove') }}">
+      {{ csrf() }}
+      <input type="hidden" name="name" value="{{ view.name }}">
+      <p class="small muted">The category goes; everything under it moves up to its parents.</p>
+      <button class="danger">Remove</button>
+    </form>
+  </details>
+  {% endif %}
+{% endif %}
+</aside>
+</div>
+{% endblock %}

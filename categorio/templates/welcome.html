@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block main %}
+<section class="intro">
+  <h1>Categories that fit together.</h1>
+  <p>Browse the public vocabulary built with
+    <a href="https://github.com/petfold/ontodag">OntoDAG</a>, where anything can sit
+    under several categories at once. <a href="{{ url_for('register') }}">Create an account</a>
+    to file your own things under it, and share them by filing them under people.
+    New here? The <a href="{{ url_for('guide') }}">guide</a> walks you through it.</p>
+</section>
+{% include "_packs.html" %}
+{% endblock %}

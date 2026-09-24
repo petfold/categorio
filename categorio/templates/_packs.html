@@ -1,0 +1,21 @@
+<h2 class="section">Vocabularies</h2>
+<ul class="packs">
+  {% for p in packs if not p.units %}
+  <li>
+    <a href="{{ url_for('pack', name=p.name) }}">{{ p.name }}</a>
+    <span class="muted">{{ p.size }}</span>
+    <p>{{ p.about }}</p>
+  </li>
+  {% endfor %}
+</ul>
+
+<h2 class="section">Dimensions and units</h2>
+<ul class="packs">
+  {% for p in packs if p.units %}
+  <li>
+    <a href="{{ url_for('pack', name=p.name) }}">{{ p.name }}</a>
+    <span class="muted">{{ p.size }}</span>
+    <p>{{ p.about }}</p>
+  </li>
+  {% endfor %}
+</ul>

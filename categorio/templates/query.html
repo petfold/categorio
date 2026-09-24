@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_macros.html" import entries, link, query_url with context %}
+{% block title %}{{ view.terms|join(' and ') }}{% endblock %}
+{% block main %}
+<article class="wide">
+  <h1 class="terms">
+    {% for t in view.terms %}
+      <span class="term">{{ link(t) }}{% if view.terms|length > 1 %}<a class="drop" title="Drop {{ t }}"
+        href="{{ query_url(view.terms|reject('equalto', t)|list) }}">×</a>{% endif %}</span>
+      {% if not loop.last %}<span class="and">and</span>{% endif %}
+    {% endfor %}
+  </h1>
+
+  <p class="muted">{{ '{:,}'.format(view.count) }} {{ 'category' if view.count == 1 else 'categories' }}
+    {% if view.terms|length > 1 %}below all of these{% else %}below {{ view.terms[0] }}{% endif %}</p>
+
+  {% if view.refine %}
+  <div class="refine">
+    <span class="muted small">Narrow by</span>
+    {% for name, n in view.refine %}
+      <a class="chip" href="{{ query_url(view.terms + [name]) }}">{{ name }} <span class="count">{{ n }}</span></a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {{ entries(view.entries) }}
+  {% if view.more %}<p class="muted small">and {{ '{:,}'.format(view.more) }} more — narrow down to see them.</p>{% endif %}
+</article>
+{% endblock %}

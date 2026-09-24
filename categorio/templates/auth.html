@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf with context %}
+{% block title %}{{ 'Create an account' if mode == 'register' else 'Sign in' }}{% endblock %}
+{% block main %}
+<form method="post" class="auth">
+  <h1>{{ 'Create an account' if mode == 'register' else 'Sign in' }}</h1>
+  {{ csrf() }}
+  <label>Username <input name="username" required autocomplete="username" autofocus
+    {% if mode == 'register' %}pattern="[A-Za-z0-9_.\-]{3,32}"{% endif %}></label>
+  <label>Password <input name="password" type="password" required
+    autocomplete="{{ 'new-password' if mode == 'register' else 'current-password' }}"
+    {% if mode == 'register' %}minlength="8"{% endif %}></label>
+  <button>{{ 'Create account' if mode == 'register' else 'Sign in' }}</button>
+  {% if mode == 'register' %}
+    <p class="small muted">Already have one? <a href="{{ url_for('login') }}">Sign in</a>.</p>
+  {% else %}
+    <p class="small muted">New here? <a href="{{ url_for('register') }}">Create an account</a>.</p>
+  {% endif %}
+</form>
+{% endblock %}

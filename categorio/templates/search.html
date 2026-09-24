@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% from "_macros.html" import entries with context %}
+{% block title %}Find “{{ text }}”{% endblock %}
+{% block main %}
+<article class="wide">
+  <h1>Find “{{ text }}”</h1>
+  {% if hits %}
+    {{ entries(hits) }}
+  {% elif text %}
+    <p class="empty">No category you can see has “{{ text }}” in its name.</p>
+  {% endif %}
+</article>
+{% endblock %}

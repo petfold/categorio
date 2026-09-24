@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_macros.html" import link, csrf with context %}
+{% block title %}Check first{% endblock %}
+{% block main %}
+<article class="wide narrow">
+  <h1>This stops people seeing things</h1>
+  {% for address, gone in losses.items() %}
+    <p><strong>{{ address|short }}</strong> would no longer see:
+      {% for n in gone %}{{ link(n) }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+  {% endfor %}
+  <p class="small muted">A share made directly and also through a group is only kept once, so
+    changing the group can take away both.</p>
+  <form method="post" action="{{ action }}">
+    {% for k, v in fields.items() if k != 'csrf' %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+    {{ csrf() }}
+    <input type="hidden" name="confirm" value="1">
+    <button>{{ confirm_text }}</button>
+    <a href="{{ fields.back or '/' }}" class="cancel">Cancel</a>
+  </form>
+</article>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "_macros.html" import entries, link, csrf, here with context %}
+{% block title %}Home{% endblock %}
+{% block main %}
+<h1>Home</h1>
+<p class="muted">Your address is <span class="addr-plain">{{ home.base }}</span>. People who know it can share with you.</p>
+
+{% if home.requests %}
+<h2 class="section">Requests</h2>
+<ul class="rows">
+  {% for r in home.requests %}
+  <li>
+    <span><strong>{{ r.sender }}</strong> wants to share {{ r.count }} {{ 'thing' if r.count == 1 else 'things' }} with you
+      {%- if r.via != [home.base] %} <span class="muted">(at {% for a in r.via %}{{ a|short }}{% if not loop.last %}, {% endif %}{% endfor %})</span>{% endif %}</span>
+    <form method="post" action="{{ url_for('accept') }}" class="inline">
+      {{ csrf() }}
+      <input type="hidden" name="sender" value="{{ r.sender }}@{{ DOMAIN }}">
+      <select name="under" aria-label="File under">
+        <option value="">at the top</option>
+        {% for n in home.categories %}<option>{{ n }}</option>{% endfor %}
+      </select>
+      <button>Accept</button>
+    </form>
+    <form method="post" action="{{ url_for('block') }}" class="inline">
+      {{ csrf() }}{{ here() }}
+      <input type="hidden" name="sender" value="{{ r.sender }}@{{ DOMAIN }}">
+      <button class="quiet">Block</button>
+    </form>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<div class="layout">
+<article>
+  <h2 class="section">Yours</h2>
+  {% if home.mine %}
+    {{ entries(home.mine) }}
+  {% else %}
+    <p class="empty">Nothing yet. Add a category, or file something of yours under the public vocabulary.</p>
+  {% endif %}
+
+  {% if home.shared %}
+  <h2 class="section">Shared with you</h2>
+  <ul class="cats">
+    {% for s in home.shared %}
+    <li>{{ link(s.sender ~ '@' ~ DOMAIN) }} <span class="count">{{ s.count }}</span></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if home.contacts %}
+  <h2 class="section">People in your store</h2>
+  <ul class="cats">
+    {% for a in home.contacts %}<li>{{ link(a) }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+</article>
+
+<aside>
+  <form method="post" action="{{ url_for('put') }}" class="tool">
+    <h3>Add a category</h3>
+    {{ csrf() }}{{ here() }}
+    <input name="name" placeholder="Name" required maxlength="200">
+    <input name="parents" placeholder="Under (optional, comma-separated)" data-complete="/names" data-multi>
+    <button>Add</button>
+  </form>
+
+  <div class="tool">
+    <h3>Your addresses</h3>
+    <p class="small">{{ link(home.base) }} <span class="muted">— requests {{ 'hidden' if home.setting == 'hide' else 'shown' }}</span></p>
+    {% for a in home.addresses %}<p class="small">{{ link(a) }}</p>{% endfor %}
+    {% if home.categories %}
+    <form method="post" action="{{ url_for('new_address') }}">
+      {{ csrf() }}
+      <label class="small">New address, for one category</label>
+      <div class="joined"><span class="muted">{{ user }}+</span><input name="tag" required maxlength="32" placeholder="work" aria-label="Tag"></div>
+      <select name="under" aria-label="Category">
+        {% for n in home.categories %}<option>{{ n }}</option>{% endfor %}
+      </select>
+      <button>Create</button>
+    </form>
+    {% endif %}
+  </div>
+</aside>
+</div>
+
+<details class="packs-more">
+  <summary>The public vocabulary</summary>
+  {% include "_packs.html" %}
+</details>
+{% endblock %}

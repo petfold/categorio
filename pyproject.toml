@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "categorio"
+version = "0.1.0"
+description = "categor.io: browse OntoDAG's public packs, build private ontologies on them"
+requires-python = ">=3.11"
+dependencies = ["ontodag>=0.26", "flask>=3.0", "markdown>=3.4"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+serve = ["gunicorn"]
+
+[project.scripts]
+categorio = "categorio.app:main"
+
+[tool.setuptools.packages.find]
+include = ["categorio*"]
+
+[tool.setuptools.package-data]
+categorio = ["templates/*.html", "static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

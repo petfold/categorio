@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %}{% if self.title() %} · {% endif %}categor.io</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='3' r='2'/><circle cx='3' cy='13' r='2'/><circle cx='13' cy='13' r='2'/><path d='M8 3 3 13M8 3l5 10' stroke='black' fill='none'/></svg>">
+  <script src="{{ url_for('static', filename='site.js') }}" defer></script>
+</head>
+<body>
+  <header class="top">
+    <a class="mark" href="{{ url_for('home') }}">categor<span>.</span>io</a>
+    <form class="search" method="get" action="{{ url_for('search') }}" role="search">
+      <input type="search" name="q" placeholder="Find a category" aria-label="Find a category"
+             value="{{ text or '' }}">
+    </form>
+    <nav>
+      {% set page = request.endpoint %}
+      <a href="{{ url_for('home') }}"{% if page == 'home' %} aria-current="page"{% endif %}>Home</a>
+      <a href="{{ url_for('guide') }}"{% if page == 'guide' %} aria-current="page"{% endif %}>Guide</a>
+      {% if user %}
+        <a href="{{ url_for('store') }}"{% if page == 'store' %} aria-current="page"{% endif %}>Store</a>
+        <form method="post" action="{{ url_for('logout') }}" class="inline">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+          <button class="link">Sign out</button>
+        </form>
+      {% else %}
+        <a href="{{ url_for('login') }}">Sign in</a>
+      {% endif %}
+    </nav>
+  </header>
+  <main>
+    {% with messages = get_flashed_messages() %}
+      {% for m in messages %}<p class="flash" role="status">{{ m }}</p>{% endfor %}
+    {% endwith %}
+    {% block main %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf with context %}
+{% block title %}Import{% endblock %}
+{% block main %}
+<article class="wide narrow">
+  <h1>Import {{ filename }}</h1>
+  <p>{{ new_own|length }} new {{ 'category' if new_own|length == 1 else 'categories' }} of your own
+    {%- if new_public %}, and {{ new_public|length }} from the public vocabulary{% endif %}.</p>
+  {% if new_own %}<p class="small muted">{{ new_own[:30]|join(', ') }}{% if new_own|length > 30 %} …{% endif %}</p>{% endif %}
+
+  {% if shares %}
+  <h2 class="section">This file shares</h2>
+  {% for address, items in shares.items() %}
+    <p><strong>{{ address|short }}</strong>: {{ items[:20]|join(', ') }}{% if items|length > 20 %} … ({{ items|length }}){% endif %}</p>
+  {% endfor %}
+  {% endif %}
+  {% if contacts %}
+  <p class="small">It also adds {{ contacts|map('short')|join(', ') }} to your store, which accepts what they share with you.</p>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('import_confirm') }}">
+    {{ csrf() }}
+    <input type="hidden" name="token" value="{{ token }}">
+    <button>Merge into my store</button>
+    <a href="{{ url_for('store') }}" class="cancel">Cancel</a>
+  </form>
+</article>
+{% endblock %}

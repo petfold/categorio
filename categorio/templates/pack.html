@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% from "_macros.html" import entries with context %}
+{% block title %}{{ info.name }}{% endblock %}
+{% block main %}
+<h1>{{ info.name }}</h1>
+<p class="muted small">public pack · v{{ info.version }} · {{ info.size }}</p>
+{% if info.about %}<p class="lede">{{ info.about }}</p>{% endif %}
+{{ entries(top) }}
+<p class="small"><a href="{{ url_for('pack_download', name=info.name) }}">Download {{ info.name }}.od</a></p>
+{% endblock %}

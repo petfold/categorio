@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf with context %}
+{% block title %}Your store{% endblock %}
+{% block main %}
+<h1>Your store</h1>
+<p class="muted">{{ '{:,}'.format(size) }} categories, including the public ones yours hang from.
+  It is an ordinary OntoDAG store: the export opens with <code>odag -f {{ user }}.od</code>.</p>
+
+<div class="pair">
+  <div class="tool">
+    <h3>Export</h3>
+    <p><a href="{{ url_for('export') }}">Download {{ user }}.od</a></p>
+  </div>
+  <form method="post" action="{{ url_for('import_preview') }}" enctype="multipart/form-data" class="tool">
+    <h3>Import</h3>
+    {{ csrf() }}
+    <input type="file" name="file" accept=".od,text/plain" required aria-label=".od file">
+    <button>Preview</button>
+    <p class="small muted">Merges an .od file into your store. You see what it adds, and whom it shares with, before anything changes.</p>
+  </form>
+</div>
+
+<h2 class="section">History</h2>
+<div class="history-actions">
+  <form method="post" action="{{ url_for('undo') }}" class="inline">{{ csrf() }}<button {% if not status.undoable %}disabled{% endif %}>Undo</button></form>
+  <form method="post" action="{{ url_for('redo') }}" class="inline">{{ csrf() }}<button class="quiet" {% if not status.redoable %}disabled{% endif %}>Redo</button></form>
+</div>
+<ol class="history">
+  {% for v in versions %}
+  <li{% if v.current %} class="current"{% endif %}>
+    <span class="muted small">{{ (v.at or '')[:16]|replace('T', ' ') }} UTC</span>
+    {{ v.message or '—' }}
+  </li>
+  {% endfor %}
+</ol>
+{% endblock %}

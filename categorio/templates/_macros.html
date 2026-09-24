@@ -1,0 +1,28 @@
+{% macro entry(e) -%}
+  {%- if e.kind == 'foreign' -%}
+    <a href="/from/{{ e.owner }}/c/{{ e.name|seg }}">{{ e.name }}</a> <span class="from">{{ e.owner }}</span>
+  {%- elif e.kind == 'address' -%}
+    <a class="addr" href="/c/{{ e.name|seg }}">{{ e.name|short }}</a>
+  {%- else -%}
+    <a href="/c/{{ e.name|seg }}">{{ e.name }}</a>
+  {%- endif -%}
+  {%- if e.count and e.has_children %} <span class="count">{{ e.count }}</span>{% endif -%}
+{%- endmacro %}
+
+{% macro link(name) -%}
+  <a {% if '@' in name %}class="addr" {% endif %}href="/c/{{ name|seg }}">{{ name|short }}</a>
+{%- endmacro %}
+
+{% macro query_url(terms) -%}
+  /q?{% for t in terms %}t={{ t|urlencode }}{% if not loop.last %}&amp;{% endif %}{% endfor %}
+{%- endmacro %}
+
+{% macro csrf() %}<input type="hidden" name="csrf" value="{{ csrf_token() }}">{% endmacro %}
+
+{% macro here() %}<input type="hidden" name="back" value="{{ request.full_path }}">{% endmacro %}
+
+{% macro entries(list) %}
+<ul class="cats">
+  {% for e in list %}<li>{{ entry(e) }}</li>{% endfor %}
+</ul>
+{% endmacro %}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_macros.html" import entry, entries, link with context %}
+{% block title %}{{ view.name }} · {{ view.owner }}{% endblock %}
+{% block main %}
+<article class="wide">
+  <h1>{{ view.name }}</h1>
+  <p class="under">
+    from {{ link(view.owner ~ '@' ~ DOMAIN) }}
+    {% if view.landed %} · shared with you{% if view.landed|length > 1 or not view.landed[0].startswith(user ~ '@') %} at
+      {% for a in view.landed %}{{ link(a) }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}{% endif %}
+  </p>
+  {% if view.above %}
+    <p class="under">under {% for e in view.above %}{{ entry(e) }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+  {% endif %}
+  {% if view.below %}
+    {{ entries(view.below) }}
+  {% else %}
+    <p class="empty">Nothing under {{ view.name }} is shared with you.</p>
+  {% endif %}
+</article>
+{% endblock %}
