@@ -4,7 +4,7 @@
 set -eu
 DATA=/srv/categorio/data
 OUT=/var/backups/categorio
-STAMP=$(date +%F)
+STAMP=${STAMP:-$(date +%F)}         # categorio-update passes its own
 umask 077
 mkdir -p "$OUT"
 # The logins database, copied safely while the site runs.

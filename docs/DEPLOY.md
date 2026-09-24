@@ -201,15 +201,49 @@ the server side.)
 
 ## Updating to a new version
 
+**One command**, from your own computer:
+
 ```bash
-sudo -u categorio git -C /srv/categorio/app pull
-sudo -u categorio /srv/categorio/venv/bin/pip install -e "/srv/categorio/app[serve]"
-sudo systemctl restart categorio
+ssh -t peter@categor.io sudo categorio-update
 ```
 
-If `deploy/categorio.service` or `deploy/nginx-categorio.conf` changed in the
-update, copy them again as in steps 6 and 7. The certbot additions live in
-the installed nginx file, so merge by hand rather than overwrite it.
+or, when already logged in as `peter`: `sudo categorio-update`.
+
+It fetches the latest version from GitHub, shows what changed, **backs up
+the data first** (into `/var/backups/categorio`, named `…-before-update`),
+installs the new code, restarts the site, and checks that it answers. If
+the new version does not start, it shows the site's log and **goes back to
+the previous version by itself**; nothing in the data changes either way.
+When there is nothing new it says so and stops.
+
+User data and registrations are kept: they live in `/srv/categorio/data`,
+which an update never touches; only `/srv/categorio/app` changes. Login
+sessions survive too (the secret key is in `/etc/categorio.env`), so people
+stay signed in. What is lost on a restart: the console's recent transcript
+and an import preview still waiting for "Merge".
+
+The one risk an update carries is a new version changing how data is
+stored. That is what the backup before every update is for: to go back,
+stop the site, restore the `…-before-update` files into
+`/srv/categorio/data`, and run the previous version.
+
+### Installing the updater (once)
+
+```bash
+sudo -u categorio git -C /srv/categorio/app pull
+sudo cp /srv/categorio/app/deploy/update.sh /usr/local/bin/categorio-update
+sudo cp /srv/categorio/app/deploy/backup.sh /usr/local/bin/categorio-backup
+sudo chmod 755 /usr/local/bin/categorio-update /usr/local/bin/categorio-backup
+```
+
+The installed copies belong to root on purpose: running files the site's
+own account can change as root would hand that account root. When an
+update brings a newer `update.sh` or `backup.sh`, the updater says so and
+prints the `cp` command to install it.
+
+The updater also keeps `/etc/systemd/system/categorio.service` in step
+with the repository's copy. The nginx site is left alone, since certbot
+has added the HTTPS parts to it.
 
 ## When something is wrong
 
