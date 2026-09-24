@@ -7,6 +7,7 @@ name = "categorio"
 version = "0.1.0"
 description = "categor.io: browse OntoDAG's public packs, build private ontologies on them"
 requires-python = ">=3.11"
+license = { text = "BSD-3-Clause" }
 dependencies = ["ontodag>=0.26", "flask>=3.0", "markdown>=3.4"]
 
 [project.optional-dependencies]

@@ -41,6 +41,9 @@ python -m categorio.app            # http://127.0.0.1:8000
 pytest
 ```
 
+Logins and account stores go in `data/` beside the code (ignored by git),
+unless `CATEGORIO_DATA` names another folder.
+
 For a deployment:
 
 ```bash
@@ -68,5 +71,9 @@ writes are serialised inside the process.
 - `categorio/db.py`: SQLite for login records, registered addresses, and an
   index of which store mentions which address.
 
-`CATEGORIO_DATA` holds `logins.sqlite` and `stores/<username>/`, each an
+The data folder holds `logins.sqlite` and `stores/<username>/`, each an
 ordinary OntoDAG record store.
+
+## Licence
+
+BSD 3-Clause, as OntoDAG; see [LICENSE](LICENSE).

@@ -20,6 +20,10 @@ from categorio.views import View
 
 MAX_CATEGORIES = 100_000
 
+# Logins and account stores, unless CATEGORIO_DATA says otherwise: `data/`
+# beside the code, kept out of git. A deployment points it elsewhere.
+DEFAULT_DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+
 
 class Site:
     """The site's state: login records, the stores, the sharing rule."""
@@ -33,9 +37,9 @@ class Site:
 
 
 def create_app(config=None):
-    app = Flask(__name__, instance_relative_config=True)
+    app = Flask(__name__)
     app.config.update(
-        DATA=os.environ.get("CATEGORIO_DATA", app.instance_path),
+        DATA=os.environ.get("CATEGORIO_DATA", DEFAULT_DATA),
         SECRET_KEY=os.environ.get("CATEGORIO_SECRET_KEY"),
         MAX_CONTENT_LENGTH=8 * 1024 * 1024,
         SESSION_COOKIE_HTTPONLY=True,
