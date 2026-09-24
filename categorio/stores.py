@@ -19,6 +19,7 @@ from collections import OrderedDict
 
 import recordstore as rs
 from ontodag.eager import EagerOntoDAG
+from ontodag.sharing import reach
 
 from categorio import names, ontology
 from categorio.db import now
@@ -162,7 +163,10 @@ class Stores:
                  (address, owner, now()))]
         for (store,) in self.db.query(
                 "SELECT store FROM mentions WHERE address = ? AND store != ?", (address, owner)):
-            for node in ontology.cone(self.get(store), address):
+            # the same order the rule reads (ontodag.sharing). Excluding a
+            # node already blocks everything below it, computed values
+            # included, so this is for consistency, not a gap it closes.
+            for node in reach(self.get(store), [address]):
                 rows.append(("INSERT OR IGNORE INTO preexisting (address, store, node) "
                              "VALUES (?, ?, ?)", (address, store, node)))
         self.db.write_many(rows)

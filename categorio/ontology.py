@@ -161,16 +161,3 @@ def parents(dag, name):
 
 def children(dag, name):
     return sorted(n.name for n in dag.nodes[name].neighbors)
-
-
-def cone(dag, name, skip=frozenset()):
-    """Everything below `name` in `dag`, never entering a node in `skip`."""
-    if name not in dag.nodes:
-        return set()
-    seen, stack = set(), [dag.nodes[name]]
-    while stack:
-        for child in stack.pop().neighbors:
-            if child.name not in seen and child.name not in skip:
-                seen.add(child.name)
-                stack.append(child)
-    return seen

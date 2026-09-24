@@ -93,9 +93,12 @@ For another account O and you:
 
 The first half is O sharing with you. The second half is you accepting O.
 Each half is an ordinary edge in its owner's store, and each side controls
-only its own half. Mechanically, what O shares with you is everything below
-your addresses in O's store, the same cone `O.get([your address])` returns,
-walked so as to skip what §10 excludes.
+only its own half. The first half is OntoDAG's own rule since 0.28
+(`ontodag.sharing.reach`, and its `docs/plans/SHARING.md`): everything
+below your addresses in O's store, in the same order `get` and `is_below`
+use (so a date filed under you shares what is filed at dates inside it),
+never entering what §10 excludes. The second half, acceptance, is this
+site's policy.
 
 Everything else follows from the rule.
 

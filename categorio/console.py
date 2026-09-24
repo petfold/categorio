@@ -235,8 +235,7 @@ class Console:
                 return Result(line, err=f"odag: {name!r} is not a {names.DOMAIN} address\n", code=2)
         if "--dry-run" in tokens:
             return Result(line, out, err, code)
-        losses = {a: gone for a, gone in sharing.losses(own, trial).items()
-                  if names.owner_of(a) != user}
+        losses = sharing.losses(own, trial, user)
         if losses and not confirm:
             return Result(line, out, err, code, losses=losses)
 

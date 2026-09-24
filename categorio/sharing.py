@@ -3,11 +3,20 @@
     You see node x of O's store if x is below one of your addresses in O's
     store, and O's address is filed in your store (not under `blocked`).
 
+The first half is OntoDAG's own rule now (`ontodag.sharing`, 0.28 —
+docs/plans/SHARING.md there): reach, where shares land, and what an edit
+takes away. What stays here is this site's policy on top of it: whose
+addresses are whose, acceptance and blocking, requests and their settings,
+and the §10 exclusion of what was filed before an address was registered
+(passed to OntoDAG as `exclude`).
+
 Everything here reads stores; nothing writes.
 """
 
 import threading
 from collections import OrderedDict
+
+from ontodag import sharing as _rule
 
 from categorio import names, ontology
 
@@ -64,17 +73,13 @@ class Sharing:
                 self._cache.move_to_end(key)
                 return self._cache[key]
         dag = self.stores.get(sender)
-        items, landing = set(), {}
-        for address in addresses:
-            if address not in dag.nodes:
-                continue
-            skip = self.stores.preexisting(address, sender) | names.SETTINGS
-            below = ontology.cone(dag, address, skip)
-            items |= {n for n in below if _is_content(n)}
-            direct = [n for n in ontology.children(dag, address)
-                      if n not in skip and _is_content(n)]
-            if direct:
-                landing[address] = direct
+        # What was below an address before it was registered never counts
+        # (§10), and settings are never content: neither is entered.
+        exclude = {a: self.stores.preexisting(a, sender) | names.SETTINGS
+                   for a in addresses}
+        items = {n for n in _rule.reach(dag, addresses, exclude) if _is_content(n)}
+        landing = {a: direct for a, names_ in _rule.landing(dag, addresses, exclude).items()
+                   if (direct := [n for n in names_ if _is_content(n)])}
         result = Shared(sender, frozenset(items), landing)
         with self._lock:
             self._cache[key] = result
@@ -151,12 +156,11 @@ class Sharing:
     # ---- what an edit would take away (§9) -----------------------------------
 
     @staticmethod
-    def losses(before, after):
-        """{address: names no longer below it} between two states of one store."""
-        out = {}
-        for address in (n for n in before.nodes if names.parse_address(n)):
-            gone = ontology.cone(before, address) - ontology.cone(after, address)
-            gone = sorted(n for n in gone if _is_content(n))
-            if gone:
-                out[address] = gone
-        return out
+    def losses(before, after, owner):
+        """{address: names it would stop seeing} between two states of
+        `owner`'s store, for every other account's address in it."""
+        others = [n for n in before.nodes
+                  if names.parse_address(n) and names.owner_of(n) != owner]
+        lost = _rule.losses(before, after, others, exclude=names.SETTINGS)
+        return {a: gone for a, all_ in lost.items()
+                if (gone := [n for n in all_ if _is_content(n)])}

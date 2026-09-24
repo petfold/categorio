@@ -11,6 +11,7 @@ from urllib.parse import quote
 from flask import (Flask, Response, abort, flash, g, redirect, render_template,
                    request, session, url_for)
 from markupsafe import Markup
+from ontodag.sharing import reach
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from categorio import names, ontology, picture
@@ -151,8 +152,7 @@ def edit(change, message, confirm_text=None):
     if not request.form.get("confirm"):
         trial = own().deepcopy()
         change(trial)
-        losses = {a: gone for a, gone in site().sharing.losses(own(), trial).items()
-                  if names.owner_of(a) != user}
+        losses = site().sharing.losses(own(), trial, user)
         if losses:
             return render_template("confirm.html", losses=losses, message=message,
                                    action=request.path, fields=request.form.to_dict(),
@@ -604,7 +604,7 @@ def _register(app):
                           if n != names.ROOT and n not in mine.nodes and not names.is_address(n))
         others = [a for a in incoming.nodes
                   if names.parse_address(a) and names.owner_of(a) != g.user]
-        shares = {a: sorted(n for n in ontology.cone(incoming, a) if not names.is_address(n))
+        shares = {a: sorted(n for n in reach(incoming, [a]) if not names.is_address(n))
                   for a in others}
         token = secrets.token_urlsafe(16)
         site().imports[token] = (g.user, incoming)

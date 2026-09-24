@@ -8,6 +8,8 @@ the public store only). Entries are plain dicts the templates render:
      "name", "owner" (foreign only), "has_children", "count" (public only)}
 """
 
+from ontodag.sharing import reach
+
 from categorio import names, ontology
 
 
@@ -144,7 +146,7 @@ class View:
             facts["contact"] = user
             facts["blocked"] = user is not None and self.site.sharing.blocked(self.user, user)
             # what the viewer shares with this address: their own names below it
-            facts["sharing"] = sorted(n for n in ontology.cone(own, name)
+            facts["sharing"] = sorted(n for n in reach(own, [name])
                                       if not names.is_address(n) and n not in names.SETTINGS)
         return facts
 

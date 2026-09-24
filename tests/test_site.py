@@ -468,3 +468,35 @@ def test_stores_in_memory_are_capped(app, people):
     for person, name in zip(b, ("a1", "b1", "c1", "d1")):   # reloaded from disk, intact
         assert f"/c/{name}" in person.text("/")
         assert stores.loaded()[0] <= 2
+
+
+def test_a_shared_date_shares_what_is_filed_inside_it(app, people):
+    """Filing `time(2026)` under a group shares what is filed at any date in
+    2026, with no edge stored between them: the rule follows OntoDAG's
+    combined order (`ontodag.sharing`, 0.28), as `get` does."""
+    acme, ada = people("acme", "ada")
+    acme.put("employees")
+    acme.share("employees", "ada")
+    acme.put("time(2026)", "employees")
+    acme.put("q3-report", "time(2026-08)")
+    ada.say("/accept", {"sender": f"acme@{D}", "under": ""})
+    assert ada.get("/from/acme/c/q3-report").status_code == 200
+
+
+def test_a_date_filed_before_registration_never_counts(app, people):
+    """§10 with typed values: `q3`, filed at a date inside `time(2026)`,
+    which was shared with dave before he existed, never reaches him, and
+    neither does anything filed there later. The old grant is excluded, and
+    excluding a node blocks what is computed below it too."""
+    (carol,) = people("carol")
+    carol.put("time(2026)")
+    carol.share("time(2026)", "dave")
+    carol.put("q3", "time(2026-08)")
+    (dave,) = people("dave")
+    dave.say("/accept", {"sender": f"carol@{D}", "under": ""})
+    assert dave.get("/from/carol/c/q3").status_code == 404
+    carol.put("q4", "time(2026-11)")
+    assert dave.get("/from/carol/c/q4").status_code == 404   # still only through the old grant
+    carol.put("new-note")
+    carol.share("new-note", "dave")
+    assert dave.get("/from/carol/c/new-note").status_code == 200
