@@ -18,6 +18,22 @@ The design is in [docs/DESIGN.md](docs/DESIGN.md).
 
 - [x] Memory: one shared public vocabulary, no per-pack copies, a cap on user stores in memory; whole packs go into exports, not stores (DESIGN §2, §8)
 
+- [x] The sharing rule taken from OntoDAG (`ontodag.sharing`, 0.28); the site keeps only its policies
+
+## Where we stopped (2026-09-24)
+
+- **Waiting on a decision:** how a store marks its principals — OntoDAG's
+  `docs/plans/SHARING.md` Q1 (options, the collision example, leaning (b):
+  declare them under a `principal` node, like dimensions). When decided:
+  the site declares each address once when it first appears in a store,
+  and OntoDAG can then report losses in `--dry-run` without being told
+  whom to ask about.
+- **Owed in OntoDAG's family:** an ontodag-fs release raising its ceiling
+  above `ontodag<0.27` (its suite passes against 0.28).
+- **Still in the site but generic:** the multi-store view (`views.py`,
+  SHARING step 3, filtered overlays), the public-chain copy
+  (`ontology.context`), pictures from a view (`picture.py`).
+
 ## Next
 
 - [ ] Decide whether personas may shadow a public name (DESIGN §13)
