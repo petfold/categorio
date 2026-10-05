@@ -266,6 +266,12 @@ and test a login in a second window before closing the first.
   ```
   If it says a restart is required (`/var/run/reboot-required` exists),
   `sudo reboot`. The site and nginx start by themselves.
+- **Crawlers** (`categorio/robots.py`): `/robots.txt` keeps every crawler
+  out of the endless and personal pages (`/q`, `/console`, `/search`,
+  `/login`, `/store`, `/from/`…) and AI-training crawlers (GPTBot, ClaudeBot,
+  Meta's, CCBot, Bytespider…) out of the whole site; the app also answers
+  those with 403, for any that ignore it. Before this, on 4 Oct 2026, bots
+  made 99% of the site's 396,558 requests a day, GPTBot alone 79%.
 
 ## Settings
 

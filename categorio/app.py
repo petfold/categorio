@@ -14,7 +14,7 @@ from markupsafe import Markup
 from ontodag.sharing import reach
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from categorio import names, ontology, picture
+from categorio import names, ontology, picture, robots
 from categorio.console import Console, commands as console_commands
 from categorio.db import Database, now
 from categorio.sharing import Sharing
@@ -220,6 +220,16 @@ def download(text, filename):
 # ---- routes ------------------------------------------------------------------
 
 def _register(app):
+
+    @app.get("/robots.txt")
+    def robots_txt():
+        return Response(robots.ROBOTS_TXT, mimetype="text/plain")
+
+    @app.before_request
+    def refuse_ai_crawlers():
+        if request.path != "/robots.txt" and robots.is_ai_crawler(request.user_agent.string):
+            return Response("AI crawlers are not welcome here; see /robots.txt.\n",
+                            status=403, mimetype="text/plain")
 
     @app.before_request
     def load_user():

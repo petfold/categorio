@@ -522,3 +522,27 @@ def test_behind_a_proxy(tmp_path, monkeypatch):
     assert seen == {"scheme": "https", "addr": "203.0.113.9"}
     monkeypatch.delenv("CATEGORIO_PROXY")
     assert not isinstance(create_app({"DATA": str(tmp_path), "TESTING": True}).wsgi_app, ProxyFix)
+
+
+def test_robots_txt(app):
+    text = app.test_client().get("/robots.txt").get_data(as_text=True)
+    assert "User-agent: GPTBot\nDisallow: /\n" in text
+    assert "User-agent: meta-externalagent\nDisallow: /\n" in text
+    everyone = text.split("User-agent: *\n", 1)[1]
+    for path in ("/q", "/console", "/login", "/search", "/store", "/from/"):
+        assert f"Disallow: {path}\n" in everyone
+    assert "Disallow: /c\n" not in everyone and "Disallow: /c/" not in everyone  # the vocabulary stays open
+
+
+def test_ai_crawlers_are_refused_but_may_read_robots_txt(app):
+    client = app.test_client()
+    gpt = {"User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; "
+                         "GPTBot/1.4; +https://openai.com/gptbot)"}
+    meta = {"User-Agent": "Mozilla/5.0 (compatible; meta-externalagent/1.1 "
+                          "(+https://developers.facebook.com/docs/sharing/webmasters/crawler))"}
+    assert client.get("/", headers=gpt).status_code == 403
+    assert client.get("/q?t=x", headers=meta).status_code == 403
+    assert client.get("/robots.txt", headers=gpt).status_code == 200
+    google = {"User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"}
+    assert client.get("/", headers=google).status_code == 200
+    assert client.get("/").status_code == 200
