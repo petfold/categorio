@@ -18,6 +18,9 @@ WAIT=${CATEGORIO_WAIT:-30}
 as_site() { sudo -u categorio "$@"; }
 
 [ "$(id -u)" = 0 ] || { echo "Run it with sudo: sudo categorio-update"; exit 1; }
+# Run from / : sudo keeps the caller's directory (peter's home), which the
+# site's account may not read, and pip then fails on it.
+cd /
 
 install_and_restart() {
     as_site "$VENV/bin/pip" install -q -e "$APP[serve]"
