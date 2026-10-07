@@ -1,10 +1,12 @@
 """The seeing rule (DESIGN §4) and receiving (§6).
 
-    You see node x of O's store if x is below one of your addresses in O's
-    store, and O's address is filed in your store (not under `blocked`).
+    You see node x of O's store if x is below `shared-with(one of your
+    addresses)` in O's store, and O's address is filed in your store (not
+    under `blocked`).
 
-The first half is OntoDAG's own rule now (`ontodag.sharing`, 0.28 —
-docs/plans/SHARING.md there): reach, where shares land, and what an edit
+The first half is OntoDAG's own rule (`ontodag.sharing`; since 0.30 it reads
+the cone of the audience term, not of the address itself — ontodag
+docs/plans/ROLES.md §8 item 20): reach, where shares land, and what an edit
 takes away. What stays here is this site's policy on top of it: whose
 addresses are whose, acceptance and blocking, requests and their settings,
 and the §10 exclusion of what was filed before an address was registered
@@ -39,7 +41,7 @@ class Shared:
 
 
 def _is_content(name):
-    return not names.is_address(name) and name not in names.SETTINGS
+    return not names.is_meta(name)
 
 
 class Sharing:
@@ -62,8 +64,9 @@ class Sharing:
     # ---- the rule --------------------------------------------------------------
 
     def shared(self, sender, reader):
-        """What `sender`'s store has below `reader`'s addresses, less what
-        was already there when each address was registered."""
+        """What `sender`'s store has below `shared-with(reader's
+        addresses)`, less what was already there when each address was
+        registered."""
         if sender == reader:
             return Shared(sender, frozenset(), {})
         addresses = self.addresses(reader)

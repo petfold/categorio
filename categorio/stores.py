@@ -14,6 +14,7 @@ process, shared by everyone, see `ontology.public`.)
 """
 
 import os
+import sys
 import threading
 from collections import OrderedDict
 
@@ -23,6 +24,30 @@ from ontodag.sharing import reach
 
 from categorio import names, ontology
 from categorio.db import now
+
+
+def migrate_shares(dag, owner):
+    """Move what `owner`'s store shares into ontodag 0.30's model.
+
+    Until 0.30 a share was an item filed under another account's address;
+    since 0.30 it is filed under `shared-with(address)` (ontodag
+    docs/plans/ROLES.md §8 item 20). Each content child of another account's
+    address moves under its audience term, so every reader sees exactly
+    what they saw: the cone of their term holds what the cone of their
+    address held. A group (`employees ⊑ ada@…`) moves the same way and
+    keeps working. Own addresses are left alone: under them is home and
+    settings, never a share. Returns how many items moved; idempotent."""
+    moves = []
+    for address in sorted(n for n in dag.nodes if names.parse_address(n)
+                          and names.owner_of(n) != owner):
+        moves += [(child.name, address) for child in dag.nodes[address].neighbors
+                  if not names.is_meta(child.name)]
+    if not moves:
+        return 0
+    ontology.ensure_audience(dag)
+    for item, address in sorted(moves):
+        dag.reclassify([item], to=[names.audience(address)], from_=[address])
+    return len(moves)
 
 
 class Stores:
@@ -90,6 +115,27 @@ class Stores:
         with self._lock:
             self._dags.pop(user, None)
             self._sizes.pop(user, None)
+
+    def users(self):
+        return sorted(u for u in os.listdir(self.directory)
+                      if names.USERNAME.match(u) and self.exists(u))
+
+    def migrate_all(self):
+        """Run `migrate_shares` over every store (at startup, before any
+        request). One commit per store that changes, with a message, so
+        `history` shows it and undo can take it back. {user: items moved}."""
+        moved = {}
+        for user in self.users():
+            count = []
+            try:
+                self.edit(user, lambda dag, u=user: count.append(migrate_shares(dag, u)),
+                          "0.30: shares move under shared-with(address)")
+            except Exception as exc:       # one store must not keep the site down
+                print(f"categorio: {user}'s shares were not moved: {exc}", file=sys.stderr)
+                continue
+            if count and count[0]:
+                moved[user] = count[0]
+        return moved
 
     # ---- writing -------------------------------------------------------------
 

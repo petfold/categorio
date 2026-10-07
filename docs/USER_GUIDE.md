@@ -351,7 +351,7 @@ top of every page opens it. Type a command after **odag ▸** and click
   appliance;
 - `count animal` says how many categories are below *animal*;
 - `below rex animal` answers *true* or *false*: is Rex below *animal*?
-- `canon weight(3000g)` shows how a value is stored: *weight(3kg)*.
+- `canon mass(3000g)` shows how a value is stored: *mass(3kg)*.
 
 You don't need to learn this. Every page has an **As a command** link that
 opens the console with that page's question already typed in, so you can
@@ -362,8 +362,9 @@ When you're signed in, choose where commands run: **Your store** or
 
 - `put holiday-photos` adds a category, and `put rex hobby` files Rex
   under *hobby*;
-- `put photos bob@categor.io` shares *photos* with Bob, exactly like the
-  Share button;
+- `put photos shared-with(bob@categor.io)` shares *photos* with Bob,
+  exactly like the Share button (filing under `bob@categor.io` itself only
+  says something about Bob, and shares nothing);
 - `remove photos` removes a category;
 - `undo` takes back your last change, and `history` lists your changes;
 - `pack biology --show` lists everything in the biology pack.

@@ -13,6 +13,7 @@ from ontodag import packs as _packs
 from ontodag import native as _native
 from ontodag.dag import OntoDAG
 
+from categorio import names
 from categorio.names import ROOT
 
 # Short descriptions of the shipped packs, in the order the site lists them.
@@ -30,7 +31,7 @@ PACK_INFO = OrderedDict([
     ("computing", "Hardware, software, networks, languages and data."),
     ("geography", "Continents, countries, landforms and bodies of water."),
     ("space", "Stars, planets, spacecraft and the rest of the sky."),
-    ("prelude", "The everyday dimensions: time, weight, length and the like — "
+    ("prelude", "The everyday dimensions: time, mass, length and the like — "
                 "categories that carry typed, ordered values."),
     ("crypto-core", "Units for BTC, ETH, BZZ and DAI, with their protocol denominations."),
     ("crypto-majors", "Units for the market's major coins."),
@@ -133,6 +134,15 @@ def prelude():
     dag = OntoDAG()
     _packs.apply(dag, "prelude")
     return dag
+
+
+def ensure_audience(dag):
+    """Make `shared-with(...)` terms work in `dag`: a store created before
+    ontodag 0.30 has prelude v3, which does not declare the audience head.
+    Merging the current prelude declares it (idempotent; a store's own
+    `weight` head, from v3, stays its own)."""
+    if names.AUDIENCE not in dag.nodes:
+        dag.merge(prelude())
 
 
 # ---- .od text ----------------------------------------------------------------

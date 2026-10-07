@@ -21,11 +21,11 @@ A website over [OntoDAG](https://github.com/petfold/ontodag).
   `ada@categor.io`. You file your own things under the public vocabulary or
   under your own categories (`work`, `hobby`); your classifications are
   seen by no one else.
-- **Sharing is filing.** File a category under someone's address, and they
-  see it and everything under it. A group is a category filed under
-  several people; `employees ⊑ sales` gives sales everything employees
-  have. Members don't see each other, and a shared category's other parents
-  stay hidden.
+- **Sharing is filing.** File a category under `shared-with(someone's
+  address)`, and they see it and everything under it (the Share button does
+  it for you). A group is a category shared with several people;
+  `employees ⊑ sales` gives sales everything employees have. Members don't
+  see each other, and a shared category's other parents stay hidden.
 - **Receiving takes consent.** A share shows up as a request (name and
   count only) until you file the sender in your store. You can also block
   them.

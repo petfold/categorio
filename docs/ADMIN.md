@@ -60,6 +60,17 @@ The updater (`/usr/local/bin/categorio-update`):
 too, so people stay signed in. Lost on a restart: the console's recent
 transcript, and an import preview waiting for "Merge".
 
+**The one exception, the update to ontodag 0.30 (2026-10-07).** OntoDAG
+moved shares from under an address to under `shared-with(address)`, so the
+first start on that version rewrites the stores that share anything (DESIGN
+§4): one commit per store, "0.30: shares move under shared-with(address)",
+visible in each store's history. Everyone sees what they saw. The updater's
+backup is taken before it, and going back to an earlier version of the code
+afterwards needs that backup restored too (see Restoring a backup): older
+code does not read the moved shares as shares. A store that could not be
+moved is named in the log (`journalctl -u categorio`) and keeps its old
+form; the site starts regardless.
+
 **When the updater says a newer `update.sh` or `backup.sh` came with the
 version,** install it with the `cp` command it prints. The installed copies
 belong to root on purpose; see DEPLOY.md.

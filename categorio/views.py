@@ -74,12 +74,13 @@ class View:
             above += [_entry_public(p) for p in public_above]
         if in_own:
             for p in ontology.parents(self.own, name):
+                target = names.audience_of(p)
                 if p == names.address(self.user):
                     at_home = True
+                elif target is not None:
+                    shared_with.append(target)                 # shared-with(ada@…), shared-with(group)
                 elif names.owner_of(p) == self.user:
                     continue                                   # one of my own addresses
-                elif names.is_address(p):
-                    shared_with.append(p)
                 elif p in names.SETTINGS:
                     continue
                 else:
@@ -88,11 +89,12 @@ class View:
                         own_above.append(p)
             below += [_entry_own(self.own, c) for c in ontology.children(self.own, name)
                       if c not in names.SETTINGS and c not in public_below]
-            # addresses this reaches through a group: OntoDAG keeps only the
-            # reduction, so these have no edge of their own here
-            through = sorted(a.name for a in self.own.get_ancestors(name)
-                             if names.is_address(a.name) and names.owner_of(a.name) != self.user
-                             and a.name not in shared_with)
+            # whom this reaches through a group (`ada@… ⊑ employees` makes
+            # shared-with(employees) ⊑ shared-with(ada@…)) or through a
+            # category shared as a whole: no edge of its own here
+            through = sorted(t for a in self.own.get_ancestors(name)
+                             if (t := names.audience_of(a.name)) is not None
+                             and names.owner_of(t) != self.user and t not in shared_with)
 
         # what others share lands here
         for sender, shared in self.visible.items():
@@ -135,7 +137,7 @@ class View:
         user = names.owner_of(name)
         own = self.own
         placed = [p for p in ontology.parents(own, name)
-                  if not names.is_address(p) and p not in names.SETTINGS]
+                  if not names.is_meta(p)]
         facts = {"placed": placed, "short": names.short(name),
                  "yours": user == self.user,
                  "tag": (names.parse_address(name) or (None, None))[1]}
@@ -146,8 +148,7 @@ class View:
             facts["contact"] = user
             facts["blocked"] = user is not None and self.site.sharing.blocked(self.user, user)
             # what the viewer shares with this address: their own names below it
-            facts["sharing"] = sorted(n for n in reach(own, [name])
-                                      if not names.is_address(n) and n not in names.SETTINGS)
+            facts["sharing"] = sorted(n for n in reach(own, [name]) if not names.is_meta(n))
         return facts
 
     def foreign(self, owner, name):
@@ -187,11 +188,11 @@ class View:
             add(_entry_public(item.name), (a.name for a in pub.get_ancestors(item.name)))
         if self.own is not None:
             for item in self.own.get(terms):
-                if names.is_address(item.name) or item.name in names.SETTINGS:
+                if names.is_meta(item.name):
                     continue
                 add(_entry_own(self.own, item.name),
                     (a.name for a in self.own.get_ancestors(item.name)
-                     if not names.is_address(a.name)))
+                     if not names.is_meta(a.name)))
         for sender, shared in self.visible.items():
             dag = self.site.stores.get(sender)
             if not all(t in dag.nodes for t in terms):
@@ -209,7 +210,7 @@ class View:
         skip = set(terms) | {names.ROOT}
         for key, parents in ancestors.items():
             for p in parents - skip:
-                if names.is_address(p) or p in names.SETTINGS:
+                if names.is_meta(p):
                     continue
                 if ontology.is_public(p) or (self.own is not None and p in self.own.nodes):
                     counts[p] = counts.get(p, 0) + 1
@@ -233,7 +234,7 @@ class View:
         if self.own is not None:
             for name in self.own.nodes:
                 if (name != names.ROOT and match(name) and not ontology.is_public(name)
-                        and name not in names.SETTINGS):
+                        and name not in names.SETTINGS and not names.is_audience(name)):
                     hits.append(_entry_own(self.own, name))
         for sender, shared in self.visible.items():
             dag = self.site.stores.get(sender)
@@ -257,10 +258,10 @@ class View:
         # your home: what you filed at the top (under your own address), and
         # your own categories that hang only from the public vocabulary
         for name in ontology.children(own, base):
-            if not names.is_address(name) and name not in names.SETTINGS:
+            if not names.is_meta(name):
                 mine.append(dict(_entry_own(own, name), count=None))
         for name in own.nodes:
-            if name in (names.ROOT,) or name in names.SETTINGS:
+            if name in (names.ROOT,) or name in names.SETTINGS or names.is_audience(name):
                 continue
             if names.is_address(name):
                 if names.owner_of(name) == self.user:
@@ -272,14 +273,14 @@ class View:
             if ontology.is_public(name):
                 continue
             parents = ontology.parents(own, name)
-            if not any(p != base and (not names.is_address(p)) and p not in names.SETTINGS
+            if not any(p != base and not names.is_meta(p)
                        and (not ontology.is_public(p) or base in ontology.parents(own, p))
                        for p in parents):
                 mine.append(_entry_own(own, name))
         shared = [{"sender": s, "count": len(sh)} for s, sh in sorted(self.visible.items())]
         return {"mine": _sorted(mine), "addresses": sorted(addresses),
                 "categories": sorted(n for n in own.nodes if n != names.ROOT
-                                     and not names.is_address(n) and n not in names.SETTINGS
+                                     and not names.is_meta(n)
                                      and (not ontology.is_public(n) or base in ontology.parents(own, n))),
                 "contacts": sorted(contacts), "shared": shared,
                 "requests": self.site.sharing.requests(self.user),

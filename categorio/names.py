@@ -4,7 +4,9 @@
 - any other bare name: a category of the store it is in;
 - `user@DOMAIN` or `user+tag@DOMAIN`: an address.
 
-Plus the handful of setting names the site gives a meaning to.
+Plus the handful of setting names the site gives a meaning to, and the
+audience terms that say what is shared: `shared-with(ada@categor.io)`,
+`shared-with(employees)` (ontodag 0.30's one sharing model; DESIGN §4).
 """
 
 import re
@@ -23,6 +25,8 @@ SETTINGS = frozenset({HIDE_REQUESTS, SHOW_REQUESTS, BLOCKED, MAINTAIN_PACKS})
 
 ROOT = "*"
 
+AUDIENCE = "shared-with"
+
 
 def address(user, tag=None):
     return f"{user}+{tag}@{DOMAIN}" if tag else f"{user}@{DOMAIN}"
@@ -35,7 +39,29 @@ def parse_address(name):
 
 
 def is_address(name):
-    return "@" in name
+    """Looks like an address (`@`), and is not an audience term naming one."""
+    return "@" in name and not is_audience(name)
+
+
+def audience(target):
+    """The term to file under to share with `target`, an address or a group."""
+    return f"{AUDIENCE}({target})"
+
+
+def audience_of(name):
+    """`ada@categor.io` for `shared-with(ada@categor.io)`, else None."""
+    if name.startswith(AUDIENCE + "(") and name.endswith(")"):
+        return name[len(AUDIENCE) + 1:-1]
+    return None
+
+
+def is_audience(name):
+    return audience_of(name) is not None
+
+
+def is_meta(name):
+    """Not content: an address, an audience term, or a setting."""
+    return is_address(name) or is_audience(name) or name in SETTINGS
 
 
 def owner_of(name):

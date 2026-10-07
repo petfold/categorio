@@ -6,7 +6,7 @@ The design is in [docs/DESIGN.md](docs/DESIGN.md).
 
 - [x] One OntoDAG `rs:` store per account, plus the public store built from the packs; SQL for logins
 - [x] Views: your store and the public store, plus what others share with you (§4 rule), with parents filtered
-- [x] Sharing: file under an address; groups, nested groups; shares through groups shown to the owner
+- [x] Sharing: file under `shared-with(address)` (ontodag 0.30's one sharing model; stores from before it moved across at startup, 2026-10-07); groups, nested groups; shares through groups shown to the owner
 - [x] Receiving: accept (file the sender), requests, block; addresses tied to categories (`ada+work`) with per-address request settings
 - [x] Access-change preview before unfile, move or remove (DESIGN §9)
 - [x] Per-account history and undo

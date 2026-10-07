@@ -18,7 +18,7 @@ from categorio import names, ontology, picture, robots
 from categorio.console import Console, commands as console_commands
 from categorio.db import Database, now
 from categorio.sharing import Sharing
-from categorio.stores import Stores
+from categorio.stores import Stores, migrate_shares
 from categorio.views import View
 
 MAX_CATEGORIES = 100_000
@@ -37,6 +37,9 @@ class Site:
         self.stores = Stores(os.path.join(directory, "stores"), self.db,
                              max_stores=int(os.environ.get("CATEGORIO_STORES_IN_MEMORY", 500)))
         self.sharing = Sharing(self.stores)
+        # ontodag 0.30 moved shares under shared-with(address): bring every
+        # store across once, before the first request (idempotent).
+        self.migrated = self.stores.migrate_all()
         self.imports = {}                  # token -> (user, dag), awaiting confirmation
         self.console = Console(self)
 
@@ -116,8 +119,7 @@ def own():
 def in_store(name):
     """A category in the viewer's store — their own, or a public one they
     use. Not the root, an address or a setting."""
-    return (name in own().nodes and name != names.ROOT and not names.is_address(name)
-            and name not in names.SETTINGS)
+    return name in own().nodes and name != names.ROOT and not names.is_meta(name)
 
 
 def own_category(name):
@@ -175,8 +177,12 @@ def console_context(dag, tokens):
     names (as the Share button adds them)."""
     with_context(dag, tokens)
     for token in tokens:
-        if names.parse_address(token) and token not in dag.nodes:
-            dag.put(token, [])
+        target = names.audience_of(token)
+        if target is not None:
+            ontology.ensure_audience(dag)          # a store from before 0.30
+        address = target if target is not None else token
+        if names.parse_address(address) and address not in dag.nodes:
+            dag.put(address, [])
 
 
 def split_names(text):
@@ -187,8 +193,9 @@ def check_incoming(dag):
     """An imported file may hold categories, public names and addresses of
     this site — nothing that claims to be of another site."""
     for name in dag.nodes:
-        if names.is_address(name) and names.parse_address(name) is None:
-            raise ValueError(f"{name!r} is not a {names.DOMAIN} address")
+        address = names.audience_of(name) or name
+        if names.is_address(address) and names.parse_address(address) is None:
+            raise ValueError(f"{address!r} is not a {names.DOMAIN} address")
 
 
 GUIDE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -488,7 +495,8 @@ def _register(app):
         def change(dag):
             if address not in dag.nodes:
                 dag.put(address, [])
-            dag.put(name, [address])
+            ontology.ensure_audience(dag)
+            dag.put(name, [names.audience(address)])
         edit(change, f"share {name} with {address}")
         # The same words for an existing and an unknown address (DESIGN §10).
         flash(f"Shared {name} with {names.short(address)}."
@@ -499,7 +507,7 @@ def _register(app):
     @act
     def unshare():
         name, address = request.form.get("name", ""), request.form.get("address", "")
-        return edit(lambda d: d.reclassify([name], to=(), from_=[address]),
+        return edit(lambda d: d.reclassify([name], to=(), from_=[names.audience(address)]),
                     f"unshare {name} with {address}",
                     confirm_text="Stop sharing") or back(node_url(name))
 
@@ -614,12 +622,14 @@ def _register(app):
             raise ValueError("that file is not UTF-8 text — export an .od file with odag") from None
         incoming = ontology.parse(text)
         check_incoming(incoming)
+        migrate_shares(incoming, g.user)           # a file exported before 0.30
         mine = own()
         arriving = sorted(n for n in incoming.nodes
-                          if n != names.ROOT and n not in mine.nodes and not names.is_address(n))
+                          if n != names.ROOT and n not in mine.nodes
+                          and not names.is_address(n) and not names.is_audience(n))
         others = [a for a in incoming.nodes
                   if names.parse_address(a) and names.owner_of(a) != g.user]
-        shares = {a: sorted(n for n in reach(incoming, [a]) if not names.is_address(n))
+        shares = {a: sorted(n for n in reach(incoming, [a]) if not names.is_meta(n))
                   for a in others}
         token = secrets.token_urlsafe(16)
         site().imports[token] = (g.user, incoming)

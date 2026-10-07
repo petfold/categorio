@@ -87,17 +87,27 @@ store: `hide-requests`, `show-requests`, `blocked`, and in the public store
 
 For another account O and you:
 
-> You see node *x* of O's store if *x* is below one of your addresses **in
-> O's store**, and O's address is filed in **your** store (not under
-> `blocked`).
+> You see node *x* of O's store if *x* is below `shared-with(one of your
+> addresses)` **in O's store**, and O's address is filed in **your** store
+> (not under `blocked`).
 
 The first half is O sharing with you. The second half is you accepting O.
 Each half is an ordinary edge in its owner's store, and each side controls
 only its own half. The first half is OntoDAG's own rule since 0.28
 (`ontodag.sharing.reach`, and its `docs/plans/SHARING.md`): everything
-below your addresses in O's store, in the same order `get` and `is_below`
-use (so a date filed under you shares what is filed at dates inside it),
-never entering what §10 excludes. The second half, acceptance, is this
+below your audience term in O's store, in the same order `get` and
+`is_below` use (so a date filed under it shares what is filed at dates
+inside it), never entering what §10 excludes.
+
+*Since ontodag 0.30 (2026-10-07)* the rule reads `shared-with(address)`,
+not the address itself (OntoDAG's `docs/plans/ROLES.md` §8 item 20).
+Filing under an address now says something about that person, and shares
+nothing: `acme@categor.io ⊑ work` (acceptance, §6) always meant that.
+Stores written before it moved across once, when the site first started
+on 0.30 (`stores.migrate_shares`): every content item filed under another
+account's address moved under that address's term, so everyone saw
+exactly what they saw before, and the move is one entry in each store's
+history. An imported `.od` file from before 0.30 is moved the same way. The second half, acceptance, is this
 site's policy.
 
 Everything else follows from the rule.
@@ -121,21 +131,28 @@ Everything else follows from the rule.
 
 ## 5. Sharing, groups, departments
 
-Sharing means filing under an address. Checked in OntoDAG:
+Sharing means filing under `shared-with(address)`; the Share button does
+it. Built through the site and checked (the stored form; OntoDAG drops
+`employees ⊑ shared-with(harry@…)` as implied through `sales`):
 
 ```
 # acme@categor.io's store
-employees ada@categor.io bob@categor.io harry@categor.io   # a group: filed under its members
-sales harry@categor.io                                     # a department
-employees sales                                            # sales sees all that employees see
-employee-information employees                             # shared with the group
-handbook employee-information document                     # part of it, and a document
+employees 'shared-with(ada@categor.io)' 'shared-with(bob@categor.io)' sales  # a group
+sales 'shared-with(harry@categor.io)'                                        # a department
+employee-information employees merger-plans    # shared with the group; a private parent stays hidden
+handbook employee-information document         # part of it, and a document
 sales-leads sales
-employee-information merger-plans                          # a private parent: stays hidden
 ```
 
 Ada sees `employees`, `employee-information`, `handbook`. Harry also sees
 `sales`, `sales-leads`. Nobody sees `merger-plans` or the other members.
+
+**A group by membership** works too, since 0.30: file people under the
+group as a kind of thing (`ada@categor.io ⊑ employees`) and share with the
+group (`handbook ⊑ shared-with(employees)`). Whatever is shared with a
+group is shared with each member, so Ada sees the handbook; members still
+do not see each other, because nothing shares the group's members. It is
+typed in the console today; the Share button shares with people.
 
 - **Groups nest the opposite way to Linux.** More access means more below
   you, so `employees ⊑ sales` reads "sales has everything employees have".
@@ -144,7 +161,8 @@ Ada sees `employees`, `employee-information`, `handbook`. Harry also sees
 - **A group is just a category.** Whatever you file under a group, its
   members see. Anything can be a group; its name is visible to its members,
   so name it accordingly.
-- **Share with one person** by filing an item directly under their address.
+- **Share with one person** by filing an item directly under
+  `shared-with(their address)`.
 
 ## 6. Receiving: acceptance, requests, blocking
 
@@ -164,8 +182,8 @@ does adding them to a group. Consent is the second half of the rule in §4.
   Unblocking is unfiling it.
 - **The sender learns nothing.** O can't read your store, so it never
   learns whether you accepted.
-- **Sharing with someone accepts them.** Filing something under Bob's
-  address puts that address in your store, and that is what accepting
+- **Sharing with someone accepts them.** Sharing something with Bob puts
+  his address in your store (the term needs it), and that is what accepting
   means. You started the exchange, so his shares appear without a request.
   Blocking still works: `bob@categor.io ⊑ blocked` hides his shares, and
   what you share with him is unchanged.
@@ -272,10 +290,10 @@ What this takes:
 - **Shares made before registration never count.** A share is an edge in
   the sender's store, and §4 is evaluated each time someone reads. So at
   registration the site records, for every store that mentions the new
-  address, what was below it at that moment. That never counts, and the
+  address, what was below its audience term at that moment. That never counts, and the
   §4 walk doesn't pass through it. (This records the state itself rather
   than a store version, so no history lookup is needed.) One case falls
-  out: re-sharing a node that was already filed under the address before
+  out: re-sharing a node that was already shared with the address before
   it existed won't deliver it.
 - **Addresses are never reused.** Once registered, an address can't be taken
   again after the account is deleted, or a new owner would inherit the old

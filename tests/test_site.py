@@ -365,7 +365,7 @@ def test_console_for_visitors(app):
     b = Browser(app)
     assert "coffee-maker" in run(b, "get device kitchen-appliance")
     assert "true" in run(b, "below dog animal")
-    assert "weight(3kg)" in run(b, "canon weight(3000g)")
+    assert "mass(3kg)" in run(b, "canon mass(3000g)")
     assert "needs an account" in run(b, "put rex dog")
     assert "needs an account" in run(b, "put rex dog", scope="mine")   # a visitor has no store
     assert "writes a file on the server" in run(b, "export all.od")
@@ -391,7 +391,7 @@ def test_console_on_your_store(app, people):
     assert "unknown super-category" in run(ada, "put rex mallory@example.com", scope="mine")
 
     run(ada, "put photos", scope="mine")
-    run(ada, f"put photos bob@{D}", scope="mine")                # sharing, typed
+    run(ada, f"put photos shared-with(bob@{D})", scope="mine")   # sharing, typed
     bob.say("/accept", {"sender": f"ada@{D}", "under": ""})
     assert bob.get("/from/ada/c/photos").status_code == 200
 
@@ -443,7 +443,7 @@ def test_whole_packs_go_in_the_export_not_the_store(app, people):
     assert whole.headers["Content-Disposition"].endswith('ada+biology.od"')
     text = whole.get_data(as_text=True)
     assert "chromosome" in text and "my-culture gene" in text
-    assert ontology.parse(text).is_below("my-culture", "physical-object")
+    assert ontology.parse(text).is_below("my-culture", "sequence")   # core's chain came along
     after = len(ada.get("/store/export").get_data(as_text=True).splitlines())
     assert before == after                                  # nothing was added to the store
 
@@ -546,3 +546,49 @@ def test_ai_crawlers_are_refused_but_may_read_robots_txt(app):
     google = {"User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"}
     assert client.get("/", headers=google).status_code == 200
     assert client.get("/").status_code == 200
+
+
+# ---- ontodag 0.30: shares move under shared-with(address) ---------------------
+
+def test_stores_from_before_0_30_are_brought_across_at_startup(tmp_path):
+    """Until ontodag 0.30 a share was an item filed under the reader's
+    address; since then it is filed under `shared-with(address)`. Stores
+    written the old way move across when the site starts, once: each reader
+    sees what they saw, a group keeps working, home and settings under one's
+    own addresses stay, and a second start changes nothing."""
+    data = str(tmp_path)
+    app = create_app({"DATA": data, "TESTING": True, "SECRET_KEY": "test"})
+    ada, bob, harry = (Browser(app) for _ in range(3))
+    for b, name in ((ada, "ada"), (bob, "bob"), (harry, "harry")):
+        b.register(name)
+    site = app.extensions["site"]
+
+    def old_style(dag):                    # as the site filed shares before 0.30
+        for name in (f"bob@{D}", f"harry@{D}"):
+            dag.put(name, [])
+        dag.put("photos", [f"bob@{D}"])                       # one person
+        dag.put("employees", [f"bob@{D}", f"harry@{D}"])      # a group
+        dag.put("handbook", ["employees"])
+        dag.put("diary", [f"ada@{D}"])                        # home, never shared
+        dag.put("hide-requests", [f"ada@{D}"])                # a setting
+    site.stores.edit("ada", old_style, "written before 0.30")
+    for b in (bob, harry):
+        b.say("/accept", {"sender": f"ada@{D}", "under": ""})
+    before = {u: set(site.sharing.shared("ada", u).items) for u in ("bob", "harry")}
+    assert before["bob"] == set()                            # 0.30's rule ignores the old filing
+
+    restarted = create_app({"DATA": data, "TESTING": True, "SECRET_KEY": "test"})
+    moved = restarted.extensions["site"].migrated
+    assert moved == {"ada": 2 + 1}                           # photos, employees (twice)
+    new = restarted.extensions["site"]
+    assert set(new.sharing.shared("ada", "bob").items) == {"photos", "employees", "handbook"}
+    assert set(new.sharing.shared("ada", "harry").items) == {"employees", "handbook"}
+    dag = new.stores.get("ada")
+    assert dag.is_below("diary", f"ada@{D}") and dag.is_below("hide-requests", f"ada@{D}")
+    assert not dag.is_below("photos", f"bob@{D}")            # no longer filed under the address
+    history, _ = new.stores.history("ada")
+    assert history[0].message == "0.30: shares move under shared-with(address)"
+
+    again = create_app({"DATA": data, "TESTING": True, "SECRET_KEY": "test"})
+    assert again.extensions["site"].migrated == {}
+    assert len(again.extensions["site"].stores.history("ada")[0]) == len(history)
