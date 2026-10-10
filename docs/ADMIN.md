@@ -71,6 +71,12 @@ code does not read the moved shares as shares. A store that could not be
 moved is named in the log (`journalctl -u categorio`) and keeps its old
 form; the site starts regardless.
 
+**The update to ontodag 0.31 (2026-10-10)** needs nothing run: stores read
+as they did. One behaviour changes with it: removing a contact also ends
+what was shared with that contact, because ontodag 0.31 refuses to remove
+a name a share still names; the confirm page says who stops seeing what,
+as before.
+
 **When the updater says a newer `update.sh` or `backup.sh` came with the
 version,** install it with the `cp` command it prints. The installed copies
 belong to root on purpose; see DEPLOY.md.

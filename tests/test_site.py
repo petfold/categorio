@@ -218,6 +218,23 @@ def test_sharing_with_someone_accepts_them(app, people):
     assert ada.get("/from/bob/c/notes").status_code == 200
 
 
+def test_removing_a_contact_ends_what_was_shared_with_them(app, people):
+    """ontodag 0.31 refuses to remove a category a term still names, so a
+    contact with a share, `shared-with(ada@…)`, would stay for good; the
+    remove passes `with_terms=True`, and the share ends with the contact
+    (the notes stay Bob's, under nothing shared)."""
+    ada, bob = people("ada", "bob")
+    bob.put("notes")
+    bob.share("notes", "ada")
+    ada.say("/accept", {"sender": f"bob@{D}", "under": ""})
+    assert ada.get("/from/bob/c/notes").status_code == 200
+    page = bob.say("/remove", {"name": f"ada@{D}", "confirm": "1"})
+    assert "Removed" in page, page[:400]
+    store = bob.text("/store/export")
+    assert f"ada@{D}" not in store and "notes" in store
+    assert ada.get("/from/bob/c/notes").status_code == 404
+
+
 def test_addresses_tied_to_categories(app, people):
     acme, ada, eve = people("acme", "ada", "eve")
     ada.put("work")

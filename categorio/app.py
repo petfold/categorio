@@ -475,7 +475,12 @@ def _register(app):
                                        and name != names.address(g.user))):
             raise ValueError("you can remove only your own categories and contacts")
         parents = [p for p in ontology.parents(own(), name) if not names.is_address(p)]
-        page = edit(lambda d: d.remove(name), f"remove {name}", confirm_text="Remove")
+        # A contact is named by its share, `shared-with(contact)`, and ontodag
+        # refuses to remove a category a term still names: the share goes with
+        # the contact (it ends; nothing it held widens), and the confirm page
+        # has already said who would stop seeing what.
+        contact = names.is_address(name)
+        page = edit(lambda d: d.remove(name, with_terms=contact), f"remove {name}", confirm_text="Remove")
         if page is not None:
             return page
         flash(f"Removed {names.short(name)}; what was under it now sits under its parents.")
