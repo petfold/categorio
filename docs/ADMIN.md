@@ -77,6 +77,13 @@ what was shared with that contact, because ontodag 0.31 refuses to remove
 a name a share still names; the confirm page says who stops seeing what,
 as before.
 
+**The update to ontodag 0.32 (2026-10-11)** needs nothing run: stores
+read as they did. A store made before it keeps its own vocabulary (its
+`geo` stays the prefix head it was, and sharing from a store made before
+ontodag 0.30 declares the audience head alone); a store made after it gets
+ontodag's prelude 5, where a place is a rectangle, `geo(48.85..48.87,2.28..2.30)`,
+and a time may be typed relative to today in the console.
+
 **When the updater says a newer `update.sh` or `backup.sh` came with the
 version,** install it with the `cp` command it prints. The installed copies
 belong to root on purpose; see DEPLOY.md.
