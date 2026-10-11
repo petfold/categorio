@@ -609,3 +609,22 @@ def test_stores_from_before_0_30_are_brought_across_at_startup(tmp_path):
     again = create_app({"DATA": data, "TESTING": True, "SECRET_KEY": "test"})
     assert again.extensions["site"].migrated == {}
     assert len(again.extensions["site"].stores.history("ada")[0]) == len(history)
+
+
+def test_a_store_from_before_030_gains_the_audience_head_and_keeps_its_geo():
+    """A store made before ontodag 0.30 has prelude v3: no `shared-with`,
+    and `geo` a prefix head. Sharing from it declares the audience head;
+    merging today's whole prelude did that, and under ontodag 0.32, whose
+    prelude makes `geo` a rectangle head, the merge refuses a store whose
+    `geo` is a prefix head. Only the audience head is declared now."""
+    from ontodag import OntoDAG
+    dag = OntoDAG()
+    for name, parents in (("dimension", []), ("prefix-dimension", ["dimension"]),
+                          ("geo", ["prefix-dimension"]), ("home", ["geo(u2e4)"])):
+        dag.put(name, parents)
+    ontology.ensure_audience(dag)
+    assert names.AUDIENCE in dag.nodes
+    dag.put(f"bob@{D}", [])
+    dag.put("photos", [names.audience(f"bob@{D}")])
+    assert dag.is_below("photos", names.audience(f"bob@{D}"))
+    assert dag.is_below("geo", "prefix-dimension") and dag.is_below("home", "geo(u2e4)")

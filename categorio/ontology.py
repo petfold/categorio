@@ -139,10 +139,17 @@ def prelude():
 def ensure_audience(dag):
     """Make `shared-with(...)` terms work in `dag`: a store created before
     ontodag 0.30 has prelude v3, which does not declare the audience head.
-    Merging the current prelude declares it (idempotent; a store's own
-    `weight` head, from v3, stays its own)."""
-    if names.AUDIENCE not in dag.nodes:
-        dag.merge(prelude())
+    The head is declared alone, as the prelude declares it, and the rest
+    of the store's vocabulary stays its own: merging today's whole prelude
+    would also re-declare `geo`, a prefix head there and a rectangle head
+    since ontodag 0.32, and a head given two kinds is refused."""
+    if names.AUDIENCE in dag.nodes:
+        return
+    for name, parents in (("dimension", []),
+                          ("reversed-dimension", ["dimension"]),
+                          (names.AUDIENCE, ["reversed-dimension"])):
+        if name not in dag.nodes:
+            dag.put(name, parents)
 
 
 # ---- .od text ----------------------------------------------------------------
